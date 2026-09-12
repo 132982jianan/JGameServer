@@ -5,17 +5,19 @@ import com.jacey.game.common.proto3.CommonMsg;
 import com.jacey.game.common.utils.DateTimeUtil;
 import com.jacey.game.db.entity.PlayStateEntity;
 import com.jacey.game.db.entity.PlayUserEntity;
-import com.jacey.game.db.repository.PlayUserRepository;
+import com.jacey.game.db.service.MongoSequenceGenerator;
 import com.jacey.game.db.service.PlayStateService;
 import com.jacey.game.db.service.PlayUserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
-import java.util.Optional;
 
 /**
- * @Description: 用户数据处理
+ * @Description: 用户数据处理（MongoTemplate实现）
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
@@ -23,44 +25,40 @@ import java.util.Optional;
 public class PlayUserServiceImpl implements PlayUserService {
 
     @Autowired
-    private PlayUserRepository playUserRepository;
+    private MongoTemplate mongoTemplate;
+
+    @Autowired
+    private MongoSequenceGenerator sequenceGenerator;
 
     @Autowired
     private PlayStateService playStateService;
 
-//    @Autowired
-//    private UserDAO userDAO;
-
     @Override
     public boolean hasUsername(String username) {
-        if (playUserRepository.findOneByUsername(username) != null) {
-            return true;
-        }
-        return false;
+        return findByUsername(username) != null;
     }
 
     @Override
     public boolean hasUserId(int userId) {
-        Optional<PlayUserEntity> optional = playUserRepository.findById(userId);
-        if (optional.get() != null) {
-            return true;
-        }
-        return false;
+        return mongoTemplate.findById(userId, PlayUserEntity.class) != null;
     }
 
     @Override
     public PlayUserEntity findPlayUserByUsername(String username) {
-        return playUserRepository.findOneByUsername(username);
+        return findByUsername(username);
     }
 
     @Override
     public void createNewUser(PlayUserEntity playUserEntity) {
+        // counters集合原子自增，替代Mysql AUTO_INCREMENT
+        int userId = sequenceGenerator.getNextSequence(PlayUserEntity.COLLECTION_NAME);
+        playUserEntity.setUserId(userId);
 
-        PlayUserEntity p = playUserRepository.save(playUserEntity);
+        mongoTemplate.save(playUserEntity);
 
         // 初始化UserState
         PlayStateEntity playStateEntity = new PlayStateEntity();
-        playStateEntity.setUserId(p.getUserId());
+        playStateEntity.setUserId(userId);
         playStateEntity.setUserOnlineState(CommonEnum.UserOnlineStateEnum.Offline_VALUE);
         playStateEntity.setUserActionState(CommonEnum.UserActionStateEnum.ActionNone_VALUE);
         playStateService.create(playStateEntity);
@@ -69,16 +67,17 @@ public class PlayUserServiceImpl implements PlayUserService {
 
     @Override
     public Integer getUserIdByUsername(String username) {
-        PlayUserEntity playUserEntity = playUserRepository.findOneByUsername(username);
-        return playUserEntity.getUserId();
+        PlayUserEntity playUserEntity = findByUsername(username);
+        return playUserEntity == null ? null : playUserEntity.getUserId();
     }
 
     @Override
     public CommonMsg.UserData getUserDataByUserId(int userId) throws Exception {
 
-        // 如果获取不到则获取mysql的数据
-        Optional<PlayUserEntity> optional = playUserRepository.findById(userId);
-        PlayUserEntity playUserEntity = optional.get();
+        PlayUserEntity playUserEntity = mongoTemplate.findById(userId, PlayUserEntity.class);
+        if (playUserEntity == null) {
+            return null;
+        }
         // 构造user data体
         CommonMsg.UserData.Builder userDataBuilder = CommonMsg.UserData.newBuilder();
         userDataBuilder.setUserId(userId);
@@ -101,8 +100,7 @@ public class PlayUserServiceImpl implements PlayUserService {
 
     @Override
     public CommonMsg.UserBriefInfo getUserBriefInfoByUserId(int userId) {
-        Optional<PlayUserEntity> optional = playUserRepository.findById(userId);
-        PlayUserEntity playUserEntity = optional.get();
+        PlayUserEntity playUserEntity = mongoTemplate.findById(userId, PlayUserEntity.class);
         if (playUserEntity == null) {
             return null;
         } else {
@@ -129,8 +127,8 @@ public class PlayUserServiceImpl implements PlayUserService {
         playUserEntity.setLastLoginTimestamp(lastLoginDate);      // 最后登录时间
         playUserEntity.setLastLoginIp(userData.getLastLoginIp()); // 最后登录ip
 
-        // 保存到mysql
-        playUserRepository.save(playUserEntity);
+        // 保存到MongoDB
+        mongoTemplate.save(playUserEntity);
     }
 
     @Override
@@ -148,5 +146,9 @@ public class PlayUserServiceImpl implements PlayUserService {
         }
     }
 
+    private PlayUserEntity findByUsername(String username) {
+        Query query = new Query(Criteria.where("username").is(username));
+        return mongoTemplate.findOne(query, PlayUserEntity.class);
+    }
 
 }

@@ -34,18 +34,24 @@
 第四部分：body n字节 byte[] 类型 用于存储经protobuf序列化过的消息主体
 ```
 
-## 快速开始
+## 快速开始（Docker Compose 一键启动）
 
 ```
 1. git clone https://github.com/JaceyRx/JGameServer.git
-2. 创建名为 jgame_server 的 Mysql 数据库,并导入 doc/sql 目录下的.sql文件
-3. 分别修改各 Server 模块的下的 config.properties (修改gm服务器所在服务器IP与当前服务器IP)
-4. 分别修改各 Server 模块的下的 application.yml (修改Mysql的连接地址信息)
-5. 分别修改各 Server 模块的下的 redis.properties (修改Redis的连接地址信息)
-6. [首次运行]-到 release/ 目录下 运行 build-first-build.bat 首次启动编译脚本
-7. 运行 release/ 目录下的 build-server-module.bat 脚本，编译各Server模块
-8. 运行 release/ 目录下的 onekey run.bat 脚本，一键启动各服务器
+2. 启动 Docker Desktop（要求本机可用 docker compose）
+3. 双击项目根目录 start-server.bat，脚本会自动完成：
+   - Maven 编译并打包全部服务器模块（不打docker镜像）
+   - 拉取 mongo/redis/jre 镜像并启动 docker compose 全部服务
+4. GM HTTP: http://127.0.0.1:8080/gateway ，客户端TCP入口: 127.0.0.1:10001
 ```
+
+说明：
+- 持久化存储已从 Mysql 重构为 MongoDB（Spring Data `MongoTemplate`），由 compose 内 `mongo:4.4` 提供，默认库名 `jgame_server`
+- 自增id由 `counters` 集合原子自增实现（替代 Mysql `AUTO_INCREMENT`）
+- GM默认账户 `admin`（与原sql种子一致）由 `GmUserSeedConfig` 在gm启动时自动创建
+- 各服务器以 `eclipse-temurin:8-jre` 容器直接挂载 `target/` 目录运行，不需要构建docker镜像
+- 镜像源/连接串可在 `deploy/.env` 中调整
+- 单机非Docker运行：本机自备 MongoDB 与 Redis 后，`java -jar game-gm-server/target/gmServer.jar` 等直接运行各模块 fat jar
 
 ## TODO List
 - 独立的登录服务器

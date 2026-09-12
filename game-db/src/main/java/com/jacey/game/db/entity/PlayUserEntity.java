@@ -1,8 +1,9 @@
 package com.jacey.game.db.entity;
 
 import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
 import java.util.Date;
 
 /**
@@ -11,13 +12,14 @@ import java.util.Date;
  * @Email: jacey.ruan@outlook.com
  */
 @Data
-@Entity
-@Table(name = "play_user")
+@Document(collection = PlayUserEntity.COLLECTION_NAME)
 public class PlayUserEntity {
 
+    public static final String COLLECTION_NAME = "play_user";
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int userId;
+
     /** 玩家名称 */
     private String username;
 
@@ -38,10 +40,4 @@ public class PlayUserEntity {
 
     /** 最后一次登录ip */
     private String lastLoginIp;
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public int getUserId() {
-        return userId;
-    }
 }

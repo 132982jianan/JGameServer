@@ -1,22 +1,21 @@
 package com.jacey.game.db.entity;
 
 import lombok.Data;
-
-import javax.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
- * @Description: TODO
+ * @Description: GM账户
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
 @Data
-@Entity
-@Table(name = "gm_user")
+@Document(collection = "gm_user")
 public class GmUserEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int userId;
+
     /** 玩家名称 */
     private String username;
 

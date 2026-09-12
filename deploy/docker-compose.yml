@@ -1,0 +1,163 @@
+name: jgame-server-local
+
+x-server-defaults: &server-defaults
+  image: ${NODE_IMAGE}
+  restart: unless-stopped
+  working_dir: /app
+  # akka artery 底层 Aeron 需要 /dev/shm 存放 log buffer，Docker Desktop 默认 64MB 不够。
+  # GM 作为 artery 入站中心（5个节点接入），需要更大的 shm。
+  shm_size: 1g
+  depends_on:
+    mongo:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  networks:
+    - jgame-net
+
+services:
+  mongo:
+    image: ${MONGO_IMAGE}
+    container_name: jgame-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --host localhost:27017 --eval \"db.adminCommand('ping').ok\""]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
+    networks:
+      - jgame-net
+
+  redis:
+    image: ${REDIS_IMAGE}
+    container_name: jgame-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    networks:
+      - jgame-net
+
+  jgame-gm:
+    <<: *server-defaults
+    container_name: jgame-gm
+    hostname: jgame-gm
+    command: ["java", "-jar", "/app/target/gmServer.jar"]
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      AKKA_CANONICAL_HOSTNAME: jgame-gm
+    volumes:
+      - ../game-gm-server/target:/app/target:ro
+      - gm-logs:/app/log
+    ports:
+      - "8080:80"      # GM HTTP (客户端/管理接口)
+      - "20000:20000"  # GM Akka artery
+
+  jgame-logic:
+    <<: *server-defaults
+    container_name: jgame-logic
+    hostname: jgame-logic
+    command: ["java", "-jar", "/app/target/logicServer.jar"]
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      AKKA_CANONICAL_HOSTNAME: jgame-logic
+    volumes:
+      - ../game-logic-server/target:/app/target:ro
+      - logic-logs:/app/log
+    ports:
+      - "30000:30000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jgame-gm:
+        condition: service_started
+
+  jgame-battle:
+    <<: *server-defaults
+    container_name: jgame-battle
+    hostname: jgame-battle
+    command: ["java", "-jar", "/app/target/battleServer.jar"]
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      AKKA_CANONICAL_HOSTNAME: jgame-battle
+    volumes:
+      - ../game-battle-server/target:/app/target:ro
+      - battle-logs:/app/log
+    ports:
+      - "40000:40000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jgame-gm:
+        condition: service_started
+
+  jgame-chat:
+    <<: *server-defaults
+    container_name: jgame-chat
+    hostname: jgame-chat
+    command: ["java", "-jar", "/app/target/chatServer.jar"]
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      AKKA_CANONICAL_HOSTNAME: jgame-chat
+    volumes:
+      - ../game-chat-server/target:/app/target:ro
+      - chat-logs:/app/log
+    ports:
+      - "50000:50000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jgame-gm:
+        condition: service_started
+
+  jgame-gateway:
+    <<: *server-defaults
+    container_name: jgame-gateway
+    hostname: jgame-gateway
+    command: ["java", "-jar", "/app/target/gatewayServer.jar"]
+    environment:
+      MONGO_URI: ${MONGO_URI}
+      AKKA_CANONICAL_HOSTNAME: jgame-gateway
+    volumes:
+      - ../game-gateway-server/target:/app/target:ro
+      - gateway-logs:/app/log
+    ports:
+      - "10001:10001"  # 客户端TCP socket入口
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jgame-gm:
+        condition: service_started
+
+networks:
+  jgame-net:
+    driver: bridge
+
+volumes:
+  mongo-data:
+  redis-data:
+  gm-logs:
+  logic-logs:
+  battle-logs:
+  chat-logs:
+  gateway-logs:

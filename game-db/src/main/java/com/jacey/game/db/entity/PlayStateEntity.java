@@ -1,8 +1,8 @@
 package com.jacey.game.db.entity;
 
 import lombok.Data;
-
-import javax.persistence.*;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 /**
  * @Description: 玩家状态
@@ -10,12 +10,11 @@ import javax.persistence.*;
  * @Email: jacey.ruan@outlook.com
  */
 @Data
-@Entity
-@Table(name = "play_state")
+@Document(collection = PlayStateEntity.COLLECTION_NAME)
 public class PlayStateEntity {
 
+    public static final String COLLECTION_NAME = "play_state";
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
 
     private int userId;
@@ -27,14 +26,8 @@ public class PlayStateEntity {
     private int userActionState;
 
     /** 对战类型（1v1 or ..） */
-    private int BattleType;
+    private int battleType;
 
     /** 对战id */
     private String battleId;
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public int getId() {
-        return id;
-    }
 }

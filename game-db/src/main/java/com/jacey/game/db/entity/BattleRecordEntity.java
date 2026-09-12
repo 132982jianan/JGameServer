@@ -1,8 +1,9 @@
 package com.jacey.game.db.entity;
 
 import lombok.Data;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
 
-import javax.persistence.*;
 import java.util.Date;
 
 /**
@@ -11,41 +12,35 @@ import java.util.Date;
  * @Email: jacey.ruan@outlook.com
  */
 @Data
-@Entity
-@Table(name = "battle_record")
+@Document(collection = BattleRecordEntity.COLLECTION_NAME)
 public class BattleRecordEntity {
 
+    public static final String COLLECTION_NAME = "battle_record";
+
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    int id;
+    private int id;
 
     /** 对战类型 */
-    int battleType;
+    private int battleType;
 
     /** 对战id */
-    String battleId;
+    private String battleId;
 
     /** 对战用户id String  逗号分隔 */
-    String userIdList;
+    private String userIdList;
 
     /** 对战开始时间 */
-    Date battleStartTimestamp;
+    private Date battleStartTimestamp;
 
     /** 对战结束时间 */
-    Date battleEndTimestamp;
+    private Date battleEndTimestamp;
 
     /** 回合数 */
-    int turnCount;
+    private int turnCount;
 
     /** 获胜方用户Id */
-    int winnerUserId;
+    private int winnerUserId;
 
     /** 获胜原因 */
-    int gameOverReason;
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public int getId() {
-        return id;
-    }
+    private int gameOverReason;
 }

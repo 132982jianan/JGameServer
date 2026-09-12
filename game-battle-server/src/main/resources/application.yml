@@ -1,6 +1,4 @@
 spring:
-  datasource:
-    driver-class-name: com.mysql.jdbc.Driver
-    username: root
-    password: 123456
-    url: jdbc:mysql://localhost/jgame_server?characterEncoding=utf-8&useSSL=false
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/jgame_server}

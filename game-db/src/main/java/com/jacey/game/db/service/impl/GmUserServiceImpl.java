@@ -2,13 +2,15 @@ package com.jacey.game.db.service.impl;
 
 import com.jacey.game.db.dao.GmUserDAO;
 import com.jacey.game.db.entity.GmUserEntity;
-import com.jacey.game.db.repository.GmUserRepository;
 import com.jacey.game.db.service.GmUserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 /**
- * @Description:
+ * @Description: Gm用户操作（MongoTemplate实现）
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
@@ -17,8 +19,9 @@ public class GmUserServiceImpl implements GmUserService {
 
     @Autowired
     private GmUserDAO gmUserDAO;
+
     @Autowired
-    private GmUserRepository gmUserRepository;
+    private MongoTemplate mongoTemplate;
 
     @Override
     public void setGmUserTokenCache(String token, Integer expire) {
@@ -32,6 +35,7 @@ public class GmUserServiceImpl implements GmUserService {
 
     @Override
     public GmUserEntity findGmUserByUsername(String username) {
-        return gmUserRepository.findOneByUsername(username);
+        Query query = new Query(Criteria.where("username").is(username));
+        return mongoTemplate.findOne(query, GmUserEntity.class);
     }
 }
