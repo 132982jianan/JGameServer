@@ -26,16 +26,17 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @Description: 基础消息处理Actor类--所有自定义的Actor都应该继承该类
- *                  用于协议初始化加载与消息分发处理
+ * 用于协议初始化加载与消息分发处理
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
 @Slf4j
 public class BaseMessageActor extends UntypedAbstractActor {
 
-    /** key：rpcNum, value: handleMethodName 协议编号与处理方法的映射关系 */
-    protected final Map<Integer, String> mappingMethodMap = new HashMap<Integer, String>();
-    /*** key：rpcNum, value: action 协议编号与action的映射关系*/
+    //<rpcNum,handleMethodName协议编号与处理方法的映射关系>
+    protected final Map<Integer, String> mappingMethodMap = new HashMap<>();
+
+    //<rpcNum, action 协议编号与action的映射关系>
     protected Map<Integer, Class<BaseMessageAction>> mappingActionClassMap = null;
 
     // 如果此Actor有下属的action包，包中有处理rpc的Action类，则必须进行指定。这样才能建立rpcNum与此Actor的对应关系
@@ -44,7 +45,8 @@ public class BaseMessageActor extends UntypedAbstractActor {
     // 第三方反射工具类
     protected final MethodAccess methodAccess = MethodAccess.get(this.getClass());
 
-    public BaseMessageActor() {}
+    public BaseMessageActor() {
+    }
 
     public BaseMessageActor(String actionPackageName) {
         this.actionPackageName = actionPackageName;
@@ -59,13 +61,11 @@ public class BaseMessageActor extends UntypedAbstractActor {
             mappingActionClassMap = MessageManager.getInstance().getActionClassByActor(this.getClass());
             // 如果MessageManager中获取不到，则重新扫描包路径并添加回MessageManager
             if (mappingActionClassMap == null) {
-                mappingActionClassMap = new HashMap<Integer, Class<BaseMessageAction>>();
-                Set<Class<?>> actionClassNames = ClassScanner.listClassesWithAnnotation(actionPackageName,
-                        MessageClassMapping.class);
+                mappingActionClassMap = new HashMap<>();
+                Set<Class<?>> actionClassNames = ClassScanner.listClassesWithAnnotation(actionPackageName, MessageClassMapping.class);
                 if (actionClassNames != null) {
                     for (Class clazz : actionClassNames) {
-                        MessageClassMapping mapping = (MessageClassMapping) clazz
-                                .getAnnotation(MessageClassMapping.class);
+                        MessageClassMapping mapping = (MessageClassMapping) clazz.getAnnotation(MessageClassMapping.class);
                         // rpcNum为消息处理协议号
                         int rpcNum = mapping.value();
                         if (mappingActionClassMap.containsKey(rpcNum) == true) {
@@ -136,7 +136,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
                     // action执行
                     BaseMessageAction action = SpringManager.getInstance().getBean(clazz);
                     IMessage response = action.handleMessage(netMessage);
-                    if ( response != null) {
+                    if (response != null) {
                         sender().tell(response, ActorRef.noSender());
                     }
                 } else if (mappingMethodMap.containsKey(rpcNum)) {
@@ -166,7 +166,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
                 if (clazz != null) {
                     BaseMessageAction action = SpringManager.getInstance().getBean(clazz);
                     IMessage response = action.handleMessage(remoteMessage);
-                    if ( response != null) {
+                    if (response != null) {
                         sender().tell(response, ActorRef.noSender());
                     }
                 } else if (mappingMethodMap.containsKey(rpcNum)) {
@@ -213,6 +213,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
 
     /**
      * 发送错误信息到远程服务器
+     *
      * @param remoteMessage
      * @param errorCode
      */
@@ -223,6 +224,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
 
     /**
      * 发送错误信息给客户端
+     *
      * @param netMessage
      * @param errorCode
      */
@@ -233,6 +235,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
 
     /**
      * 终止命令处理
+     *
      * @param t
      * @throws Exception
      */
@@ -241,6 +244,7 @@ public class BaseMessageActor extends UntypedAbstractActor {
 
     /**
      * 定时任务
+     *
      * @param initialDelaySecond
      * @param intervalSecond
      * @param msg
@@ -248,9 +252,13 @@ public class BaseMessageActor extends UntypedAbstractActor {
      */
     protected Cancellable schedule(int initialDelaySecond, int intervalSecond, IMessage msg) {
         ActorSystem system = context().system();
-        return system.scheduler().schedule(Duration.create(initialDelaySecond, TimeUnit.SECONDS),
-                Duration.create(intervalSecond, TimeUnit.SECONDS), getSelf(), msg, system.dispatcher(),
-                ActorRef.noSender());
+        return system.scheduler().schedule(
+                Duration.create(initialDelaySecond, TimeUnit.SECONDS),
+                Duration.create(intervalSecond, TimeUnit.SECONDS),
+                getSelf(),
+                msg,
+                system.dispatcher(),
+                ActorRef.noSender()
+        );
     }
-
 }

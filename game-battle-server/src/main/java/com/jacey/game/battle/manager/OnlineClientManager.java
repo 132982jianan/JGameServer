@@ -6,6 +6,7 @@ import com.jacey.game.common.manager.IManager;
 import com.jacey.game.db.service.BattleServerLoadBalanceService;
 import com.jacey.game.db.service.impl.BattleServerLoadBalanceServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -18,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class OnlineClientManager implements IManager {
 
-    private OnlineClientManager(){}
+    private OnlineClientManager() {
+    }
 
     private static OnlineClientManager instance = new OnlineClientManager();
 
@@ -26,11 +28,11 @@ public class OnlineClientManager implements IManager {
         return instance;
     }
 
-    // key:battleId, value:这个对战房间对应的BaseBattleActor
-    private final Map<String, ActorRef> battleIdToBattleActor = new ConcurrentHashMap<String, ActorRef>();
-    // key:sessionId,
-    // value:这个客户端对应gateway中ResponseActor（玩家发的消息，gateway转发到battleServer，sender为ResponseActor）
-    private final Map<Integer, ActorRef> sessionIdToGatewayResponseActor = new ConcurrentHashMap<Integer, ActorRef>();
+    //<battleId,这个对战房间对应的BaseBattleActor>
+    private final Map<String, ActorRef> battleIdToBattleActor = new ConcurrentHashMap<>();
+
+    // <sessionId,这个客户端对应gateway中ResponseActor（玩家发的消息，gateway转发到battleServer，sender为ResponseActor）>
+    private final Map<Integer, ActorRef> sessionIdToGatewayResponseActor = new ConcurrentHashMap<>();
 
     private BattleServerLoadBalanceService battleServerLoadBalanceService;
 
@@ -48,6 +50,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 添加BattleActor（对战房间添加）
+     *
      * @param battleId
      * @param battleActor
      * @param userIds
@@ -70,6 +73,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 移除对战房间
+     *
      * @param battleId
      * @param userIds
      */
@@ -93,6 +97,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 获取对战房间
+     *
      * @param battleId
      * @return
      */
@@ -102,6 +107,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 获取房间总数
+     *
      * @return
      */
     public int getBattleCount() {
@@ -110,6 +116,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 添加 GatewayResponseActor
+     *
      * @param sessionId
      * @param gatewayResponseActor
      */
@@ -119,6 +126,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 移除 GatewayResponseActor
+     *
      * @param sessionId
      */
     public void removeSessionIdToGatewayResponseActor(int sessionId) {
@@ -127,13 +135,13 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 获取 GatewayResponseActor
+     *
      * @param sessionId
      * @return
      */
     public ActorRef getGatewayResponseActor(int sessionId) {
         return sessionIdToGatewayResponseActor.get(sessionId);
     }
-
 
 
 }

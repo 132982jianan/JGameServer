@@ -44,16 +44,17 @@ public class BattleRoomManagerActor extends BaseMessageActor {
 
     /**
      * 创建战场
-     * @param remoteMessage  主逻辑服务器传输的消息对象
+     *
+     * @param remoteMessage 主逻辑服务器传输的消息对象
      */
-    @MessageMethodMapping(value = { RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE }, isNet = true)
+    @MessageMethodMapping(value = {RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE}, isNet = true)
     public void noticeBattleServerCreateNewBattle(RemoteMessage remoteMessage) {
         RemoteServer.NoticeBattleServerCreateNewBattleRequest request = remoteMessage
                 .getLite(RemoteServer.NoticeBattleServerCreateNewBattleRequest.class);
-        RemoteServer.BattleRoomInfo battleRoomInfo = request.getBattleRoomInfo();   	// 对战房间信息
-        CommonEnum.BattleTypeEnum battleType = battleRoomInfo.getBattleType();		// 对战类型
-        String battleId = battleRoomInfo.getBattleId();					// 对战id
-        List<Integer> userIds = battleRoomInfo.getUserIdsList();		// 对战双方userId
+        RemoteServer.BattleRoomInfo battleRoomInfo = request.getBattleRoomInfo();         // 对战房间信息
+        CommonEnum.BattleTypeEnum battleType = battleRoomInfo.getBattleType();            // 对战类型
+        String battleId = battleRoomInfo.getBattleId();                                   // 对战id
+        List<Integer> userIds = battleRoomInfo.getUserIdsList();                          // 对战双方userId
         switch (battleType.getNumber()) {
             case CommonEnum.BattleTypeEnum.BattleTypeTwoPlayer_VALUE: {   // 1v1
                 // 1.将当前battleId 添加到正在进行对战的对战的battleId list中。 Redis
@@ -73,7 +74,8 @@ public class BattleRoomManagerActor extends BaseMessageActor {
                         RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE, builder);
                 sender().tell(remoteMsg, ActorRef.noSender());
                 break;
-            } default: {
+            }
+            default: {
                 log.error("handle RemoteRpcNoticeBattleServerCreateNewBattle error, not support battleType = {}",
                         battleType);
                 break;
@@ -85,10 +87,11 @@ public class BattleRoomManagerActor extends BaseMessageActor {
      * 获取当前所在对局的信息、投降认输、落子、
      * 客户端发现当前回合玩家超时未行动，请求服务器强制结束回合、确认可以开始游戏、
      * 超时未确认可以开始游戏，则强制开始游戏
+     *
      * @param message
      * @throws Exception
      */
-    @MessageMethodMapping(value = { Rpc.RpcNameEnum.GetBattleInfo_VALUE, Rpc.RpcNameEnum.Concede_VALUE,
+    @MessageMethodMapping(value = {Rpc.RpcNameEnum.GetBattleInfo_VALUE, Rpc.RpcNameEnum.Concede_VALUE,
             Rpc.RpcNameEnum.PlacePieces_VALUE, Rpc.RpcNameEnum.ReadyToStartGame_VALUE}, isNet = true)
     public void proxyNetMessageInvoke(IMessage message) throws Exception {
         NetMessage netMessage = (NetMessage) message;
@@ -101,14 +104,15 @@ public class BattleRoomManagerActor extends BaseMessageActor {
         if (battleActor == null) {
             // 若无法在本battleServer中找到对应的BattleActor，说明对战之前已创建，但因为之前负责的battleServer下线，而交由本服务器处理
             // 则需要为该战斗重新建立BattleActor
-            CommonMsg.UserState userState = playStateService.getUserStateByUserId(userId);		// 获取用户状态
-            CommonEnum.BattleTypeEnum battleType = userState.getBattleType();		// 获取对战类型
+            CommonMsg.UserState userState = playStateService.getUserStateByUserId(userId);        // 获取用户状态
+            CommonEnum.BattleTypeEnum battleType = userState.getBattleType();        // 获取对战类型
             switch (battleType.getNumber()) {
                 case CommonEnum.BattleTypeEnum.BattleTypeTwoPlayer_VALUE: {    // 1v1
                     battleActor = context().actorOf(
                             Props.create(BaseBattleActor.class, "com.jacey.game.battle.action.baseBattle"));
                     break;
-                } default: {
+                }
+                default: {
                     log.error("proxyNetMessageInvoke error, recreate battleActor error, unsupport battleType = {}",
                             battleType);
                     NetMessage errorNetMsg = new NetMessage(netMessage.getRpcNum(), Rpc.RpcErrorCodeEnum.ServerError_VALUE);
