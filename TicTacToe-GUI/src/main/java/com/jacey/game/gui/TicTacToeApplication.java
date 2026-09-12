@@ -11,14 +11,11 @@ import org.springframework.context.annotation.ComponentScan;
  * @Email: jacey.ruan@outlook.com
  */
 @SpringBootApplication
-@EnableAutoConfiguration
 @ComponentScan("com.jacey.game")
 public class TicTacToeApplication {
-
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(TicTacToeApplication.class);
         app.addListeners(new ApplicationReadyEventListener());
         app.run(args);
     }
-
 }
