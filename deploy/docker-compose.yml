@@ -4,18 +4,33 @@ x-server-defaults: &server-defaults
   image: ${NODE_IMAGE}
   restart: unless-stopped
   working_dir: /app
-  # akka artery 底层 Aeron 需要 /dev/shm 存放 log buffer，Docker Desktop 默认 64MB 不够。
-  # GM 作为 artery 入站中心（5个节点接入），需要更大的 shm。
-  shm_size: 1g
-  depends_on:
-    mongo:
-      condition: service_healthy
-    redis:
-      condition: service_healthy
+  shm_size: 256m
+  volumes:
+    - ./server/build/libs/server-all.jar:/app/server-all.jar:ro
+    - ./game-common/src/main/resources/conf:/app/conf:ro
   networks:
     - jgame-net
 
 services:
+  nacos:
+    image: ${NACOS_IMAGE}
+    container_name: jgame-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    networks:
+      - jgame-net
+
   mongo:
     image: ${MONGO_IMAGE}
     container_name: jgame-mongo
@@ -54,31 +69,36 @@ services:
     <<: *server-defaults
     container_name: jgame-gm
     hostname: jgame-gm
-    command: ["java", "-jar", "/app/target/gmServer.jar"]
+    command: ["java", "-jar", "server-all.jar", "--kind", "gm"]
     environment:
-      MONGO_URI: ${MONGO_URI}
-      AKKA_CANONICAL_HOSTNAME: jgame-gm
-    volumes:
-      - ../game-gm-server/target:/app/target:ro
-      - gm-logs:/app/log
+      NACOS_HOST: nacos
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
     ports:
-      - "8080:80"      # GM HTTP (客户端/管理接口)
-      - "20000:20000"  # GM Akka artery
+      - "8080:80"      # GM HTTP
+      - "20000:20000"  # akka artery
+    depends_on:
+      nacos:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   jgame-logic:
     <<: *server-defaults
     container_name: jgame-logic
     hostname: jgame-logic
-    command: ["java", "-jar", "/app/target/logicServer.jar"]
+    command: ["java", "-jar", "server-all.jar", "--kind", "logic", "--id", "1"]
     environment:
-      MONGO_URI: ${MONGO_URI}
-      AKKA_CANONICAL_HOSTNAME: jgame-logic
-    volumes:
-      - ../game-logic-server/target:/app/target:ro
-      - logic-logs:/app/log
+      NACOS_HOST: nacos
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
     ports:
       - "30000:30000"
     depends_on:
+      nacos:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
@@ -90,16 +110,16 @@ services:
     <<: *server-defaults
     container_name: jgame-battle
     hostname: jgame-battle
-    command: ["java", "-jar", "/app/target/battleServer.jar"]
+    command: ["java", "-jar", "server-all.jar", "--kind", "battle", "--id", "1"]
     environment:
-      MONGO_URI: ${MONGO_URI}
-      AKKA_CANONICAL_HOSTNAME: jgame-battle
-    volumes:
-      - ../game-battle-server/target:/app/target:ro
-      - battle-logs:/app/log
+      NACOS_HOST: nacos
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
     ports:
       - "40000:40000"
     depends_on:
+      nacos:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
@@ -111,16 +131,16 @@ services:
     <<: *server-defaults
     container_name: jgame-chat
     hostname: jgame-chat
-    command: ["java", "-jar", "/app/target/chatServer.jar"]
+    command: ["java", "-jar", "server-all.jar", "--kind", "chat", "--id", "1"]
     environment:
-      MONGO_URI: ${MONGO_URI}
-      AKKA_CANONICAL_HOSTNAME: jgame-chat
-    volumes:
-      - ../game-chat-server/target:/app/target:ro
-      - chat-logs:/app/log
+      NACOS_HOST: nacos
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
     ports:
       - "50000:50000"
     depends_on:
+      nacos:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
@@ -132,16 +152,18 @@ services:
     <<: *server-defaults
     container_name: jgame-gateway
     hostname: jgame-gateway
-    command: ["java", "-jar", "/app/target/gatewayServer.jar"]
+    command: ["java", "-jar", "server-all.jar", "--kind", "gateway", "--id", "1"]
     environment:
-      MONGO_URI: ${MONGO_URI}
-      AKKA_CANONICAL_HOSTNAME: jgame-gateway
-    volumes:
-      - ../game-gateway-server/target:/app/target:ro
-      - gateway-logs:/app/log
+      NACOS_HOST: nacos
+      MONGO_HOST: mongo
+      REDIS_HOST: redis
     ports:
-      - "10001:10001"  # 客户端TCP socket入口
+      - "10001:10001"  # 客户端 TCP 入口
+      - "10002:10002"  # 客户端 WebSocket 入口
+      - "10000:10000"  # akka artery
     depends_on:
+      nacos:
+        condition: service_healthy
       mongo:
         condition: service_healthy
       redis:
@@ -156,8 +178,3 @@ networks:
 volumes:
   mongo-data:
   redis-data:
-  gm-logs:
-  logic-logs:
-  battle-logs:
-  chat-logs:
-  gateway-logs:

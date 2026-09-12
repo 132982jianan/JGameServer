@@ -1,0 +1,13 @@
+# 业务公共配置（原各服务 config.properties / propertyConfig.xml 归并）
+# 心跳（秒）：读空闲/写空闲/全空闲，超过 all 客户端无发包判定空闲
+socketReaderIdleTime: 0
+socketWriterIdleTime: 0
+socketAllIdleTime: 300
+# 各业务服务默认 id（net.yml 有 portOffset 时同机多节点可再偏移）
+logicServerId: 1
+isMainLogicServer: true
+battleServerId: 1
+chatServerId: 1
+gatewayId: 1
+# 网关对外连接地址（客户端从 GM 拿到的 ip:port，Docker/生产可被 Nacos 配置覆盖）
+gatewayConnectPath: "127.0.0.1:10001"

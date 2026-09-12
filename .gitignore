@@ -1,47 +1,67 @@
-# Compiled class file
+# ============ Java / JVM ============
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.ear
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+*.nar
 hs_err_pid*
+replay_pid*
 
-# =====================================
+# 注意：Gradle wrapper 引导 jar 必须入库
+!gradle/wrapper/gradle-wrapper.jar
 
-*.class
-
-#package file
-*.war
-*.ear
-
-#maven ignore
+# ============ Maven（历史遗留，已迁移 Gradle）============
 target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
 
-#eclipse ignore
-.settins/
-.project
-.classpatch
+# ============ Gradle ============
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+!**/src/**/build/
+# gradle 缓存与守护进程日志
+gradle-app.setting
+.gradletasknamecache
 
-#idea
+# ============ IDEA ============
 .idea/
-/idea/
 *.ipr
 *.iml
 *.iws
+.idea_modules/
+out/
+*/out/
 
-# test ignore
-test/
+# ============ Eclipse ============
+.settings/
+.project
+.classpath
+bin/
+*/bin/
+
+# ============ 日志 / 运行时产物 ============
+*.log
+logs/
+*.log.gz
+
+# ============ VS Code ============
+.vscode/
+
+# ============ Kotlin ============
+.kotlin/
+
+# ============ 其它 ============
+*.ctxt
+.mtj.tmp/
+*.tar.gz
+*.rar
+*.zip
+*.7z

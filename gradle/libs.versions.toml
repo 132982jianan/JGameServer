@@ -1,0 +1,59 @@
+[versions]
+kotlin = "2.3.0"
+kotlinx-coroutines-core = "1.10.2"
+kotlinx-serialization = "1.9.0"
+kotlinx-cli = "0.3.6"
+kotlin-logging = "7.0.3"
+slf4j = "2.0.16"
+log4j2 = "2.24.1"
+netty = "4.1.112.Final"
+protobuf = "4.33.0"
+protobuf-plugin = "0.9.5"
+akka = "2.6.21"
+ktor = "3.3.3"
+mongodb-driver = "5.5.1"
+lettuce = "6.4.0.RELEASE"
+nacos = "3.1.0"
+kaml = "0.61.0"
+shadow = "9.2.2"
+junit-jupiter = "5.10.0"
+
+[libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines-core" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
+kotlinx-cli = { module = "org.jetbrains.kotlinx:kotlinx-cli", version.ref = "kotlinx-cli" }
+io-github-oshai-kotlin-logging-jvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging" }
+slf4j-api = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+log4j-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j2" }
+log4j-slf4j2-impl = { module = "org.apache.logging.log4j:log4j-slf4j2-impl", version.ref = "log4j2" }
+log4j-layout-template-json = { module = "org.apache.logging.log4j:log4j-layout-template-json", version.ref = "log4j2" }
+io-netty-netty-all = { module = "io.netty:netty-all", version.ref = "netty" }
+com-google-protobuf-protobuf-java = { module = "com.google.protobuf:protobuf-java", version.ref = "protobuf" }
+com-google-protobuf-protobuf-java-util = { module = "com.google.protobuf:protobuf-java-util", version.ref = "protobuf" }
+com-google-protobuf-protobuf-kotlin = { module = "com.google.protobuf:protobuf-kotlin", version.ref = "protobuf" }
+akka-actor = { module = "com.typesafe.akka:akka-actor-typed_2.13", version.ref = "akka" }
+akka-classic = { module = "com.typesafe.akka:akka-actor_2.13", version.ref = "akka" }
+akka-remote = { module = "com.typesafe.akka:akka-remote_2.13", version.ref = "akka" }
+akka-slf4j = { module = "com.typesafe.akka:akka-slf4j_2.13", version.ref = "akka" }
+ktor-bom = { module = "io.ktor:ktor-bom", version.ref = "ktor" }
+ktor-server-core = { module = "io.ktor:ktor-server-core-jvm" }
+ktor-server-netty = { module = "io.ktor:ktor-server-netty-jvm" }
+ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml" }
+ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negotiation" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json" }
+ktor-client-core = { module = "io.ktor:ktor-client-core-jvm" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio-jvm" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation" }
+mongodb-driver-kotlin-coroutine = { module = "org.mongodb:mongodb-driver-kotlin-coroutine", version.ref = "mongodb-driver" }
+mongodb-driver-core = { module = "org.mongodb:mongodb-driver-core", version.ref = "mongodb-driver" }
+bson = { module = "org.mongodb:bson", version.ref = "mongodb-driver" }
+lettuce-core = { module = "io.lettuce:lettuce-core", version.ref = "lettuce" }
+nacos-client = { module = "com.alibaba.nacos:nacos-client", version.ref = "nacos" }
+kaml = { module = "com.charleskorn.kaml:kaml", version.ref = "kaml" }
+junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit-jupiter" }
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+protobuf = { id = "com.google.protobuf", version.ref = "protobuf-plugin" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
