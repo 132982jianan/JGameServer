@@ -19,7 +19,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 public class OnlineClientManager implements IManager {
 
-    private OnlineClientManager(){}
+    private OnlineClientManager() {
+    }
 
     private static OnlineClientManager instance = new OnlineClientManager();
 
@@ -27,9 +28,8 @@ public class OnlineClientManager implements IManager {
         return instance;
     }
 
-    // key:sessionId, value:玩家对应的ChannelActor
-    /** 内部session缓存 */
-    private final Map<Integer, Channel> sessionIdToChannelMap = new ConcurrentHashMap<Integer, Channel>();
+    //<sessionId,玩家对应的ChannelActor>内部session缓存
+    private final Map<Integer, Channel> sessionIdToChannelMap = new ConcurrentHashMap<>();
 
     private SessionIdService sessionIdService;
     private GatewayServerLoadBalanceService gatewayServerLoadBalanceService;
@@ -56,6 +56,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 获取当前在线客户端数
+     *
      * @return
      */
     public int getOnlineSessionCount() {
@@ -64,6 +65,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 用于SessionId与channel、GatewayId绑定。并更新服务器负载
+     *
      * @param sessionId
      * @param channel
      */
@@ -80,6 +82,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * Session 断线处理
+     *
      * @param sessionId
      */
     public void removeSession(int sessionId) {
@@ -119,6 +122,7 @@ public class OnlineClientManager implements IManager {
 
     /**
      * 如果离线的客户端已连上logicServer或 battleServer，需要进行通知
+     *
      * @param userId        如果该session对应的客户端登录成功，则需传此字段
      * @param isUserOffline 是否是玩家也要下线（同一账号二次登录导致旧session断开，但对应玩家仍在线）
      */
@@ -177,8 +181,7 @@ public class OnlineClientManager implements IManager {
                     pushBuilder.setIsUserOffline(isUserOffline);
                     RemoteMessage remoteMsg = new RemoteMessage(
                             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE, pushBuilder);
-                    if (MessageManager.getInstance().sendRemoteMsgToChatServer(remoteMsg,
-                            connectedLogicServerId) == false) {
+                    if (!MessageManager.getInstance().sendRemoteMsgToChatServer(remoteMsg, connectedLogicServerId)) {
                         log.error(
                                 "【客户端断线Gateway推送失败】,无法推送消息到 battle Server, sessionId = {}, userId = {}, battleId = {}, battleServerId = {}",
                                 sessionId, userId, battleId, connectedChatServerId);

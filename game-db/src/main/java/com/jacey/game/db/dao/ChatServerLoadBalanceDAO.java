@@ -23,19 +23,27 @@ public class ChatServerLoadBalanceDAO {
     @Autowired
     RedisTemplate jedisTemplate;
 
-    /** 进行中的battleId与处理这场战斗聊天的chatServerId的对应关系（map类型，key:battleId, value:chatServerId） */
+    /**
+     * 进行中的battleId与处理这场战斗聊天的chatServerId的对应关系（map类型，key:battleId, value:chatServerId）
+     */
     @Resource(name = "integerTemplate")
     private HashOperations<String, String, Integer> battleIdToChatServerIdOps;
 
-    /** chat服务器的负载（zset类型，score:服务器负载, value:chatServerId） */
+    /**
+     * chat服务器的负载（zset类型，score:服务器负载, value:chatServerId）
+     */
     @Resource(name = "stringTemplate")
     private ZSetOperations<String, String> chatServerLoadBalanceOps;
 
-    /** 已注册到GM服务器的Chat服务器id对应的akka地址（map类型，key:ChatServerId, value:akka地址） */
+    /**
+     * 已注册到GM服务器的Chat服务器id对应的akka地址（map类型，key:ChatServerId, value:akka地址）
+     */
     @Resource(name = "stringTemplate")
     private HashOperations<String, String, String> chatServerIdToAkkaPathOps;
 
-    /** battleId与ChatServerId绑定 */
+    /**
+     * battleId与ChatServerId绑定
+     */
     public Integer getOneBattleIdToChatServerId(String battleId) {
         return battleIdToChatServerIdOps.get(RedisKeyHelper.getBattleIdToChatServerIdRedisKey(), battleId);
     }
@@ -50,7 +58,8 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 设置单个chatServerId 与 AkkaPath
-     * @param chatServerId	聊天服务器ID
+     *
+     * @param chatServerId 聊天服务器ID
      * @param akkaPath
      */
     public void setOneChatServerIdToAkkaPath(int chatServerId, String akkaPath) {
@@ -60,16 +69,17 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 根据 chatServerId获取单个 AkkaPath
-     * @param chatServerId	聊天服务器ID
+     *
+     * @param chatServerId 聊天服务器ID
      * @return
      */
     public String getOneChatServerIdToAkkaPath(int chatServerId) {
-        return chatServerIdToAkkaPathOps.get(RedisKeyHelper.getChatServerIdToAkkaPathRedisKey(),
-                String.valueOf(chatServerId));
+        return chatServerIdToAkkaPathOps.get(RedisKeyHelper.getChatServerIdToAkkaPathRedisKey(), String.valueOf(chatServerId));
     }
 
     /**
      * 获取所有ChatServer akka Path
+     *
      * @return
      */
     public Map<Integer, String> getAllChatServerIdToAkkaPath() {
@@ -86,6 +96,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 根据ChatServerId删除单个AkkaPath
+     *
      * @param chatServerId
      */
     public void removeOneChatServerIdToAkkaPath(int chatServerId) {
@@ -103,6 +114,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 设置chatServer负载
+     *
      * @param chatServerId
      * @param count
      */
@@ -113,6 +125,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 修改chatServer负载
+     *
      * @param chatServerId
      * @param changeCount
      */
@@ -123,6 +136,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 移除chatServer 负载
+     *
      * @param chatServerId
      */
     public void removeOneChatServerLoadBalance(int chatServerId) {
@@ -132,6 +146,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 获取所有ChatServer 负载信息
+     *
      * @return
      */
     public Map<Integer, Integer> getAllChatServerLoadBalance() {
@@ -156,6 +171,7 @@ public class ChatServerLoadBalanceDAO {
 
     /**
      * 获取空闲的chatServer Id
+     *
      * @return
      */
     public Integer getLeisureChatServerId() {

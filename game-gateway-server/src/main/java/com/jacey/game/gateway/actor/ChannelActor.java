@@ -224,7 +224,7 @@ public class ChannelActor extends UntypedAbstractActor {
         // 获取channel 的key为：nettyChannelToActorKey的att属性数据
         Attribute<ActorRef> actorAttr = channel.attr(NETTY_CHANNEL_TO_ACTOR_KEY);
         ActorRef actor = actorAttr.get();
-        /** 为null说明是重新连接 */
+        //为null说明是重新连接
         if (actor == null) {
             // 自动生成session
             int sessionId = sessionIdService.addAndGetNextAvailableSessionId();

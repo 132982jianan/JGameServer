@@ -27,6 +27,9 @@
     <packaging>pom</packaging>
 
     <properties>
+        <java.version>1.8</java.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
         <game-common.version>1.0-SNAPSHOT</game-common.version>
         <game-gm-server.version>1.0-SNAPSHOT</game-gm-server.version>
         <game-gateway-server.version>1.0-SNAPSHOT</game-gateway-server.version>
