@@ -1,14 +1,13 @@
 package com.jacey.game.common.framework.net
 
+import akka.actor.ActorRef
 import com.alibaba.nacos.api.naming.listener.NamingEvent
 import com.jacey.game.common.framework.akka.Akka
-import com.jacey.game.common.framework.akka.askAwait
 import com.jacey.game.common.framework.akka.resolveAwait
 import com.jacey.game.common.framework.nacos.ConfigLoader
 import com.jacey.game.common.framework.nacos.Nacos
 import com.jacey.game.common.framework.process.Exit
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.runBlocking
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -24,7 +23,9 @@ object NodeRegister {
 
     lateinit var selfInfo: NodeInfo
         private set
+
     val selfId: Int get() = selfInfo.nodeId
+
     lateinit var netConf: NetConfig
         private set
 
@@ -82,12 +83,16 @@ object NodeRegister {
 
     /** 启动 actor system（注册成功后调用，端口已确定；loglevel 等来自 Nacos net.yml） */
     fun startActorSystem() {
-        Akka.start(selfInfo.kind.name, selfInfo.nodeId, selfInfo.arteryPort, selfInfo.arteryHost,
-            netConf.akka.loglevel)
+        Akka.start(
+            selfInfo.kind.name, selfInfo.nodeId, selfInfo.arteryPort, selfInfo.arteryHost,
+            netConf.akka.loglevel
+        )
     }
 
     /** actor system 名：小写 kind + id，如 gateway_1 */
-    fun systemName(kind: NodeKind, id: Int) = "${kind.name}_$id"
+    fun systemName(kind: NodeKind, id: Int): String {
+        return "${kind.name}_$id"
+    }
 
     /** 自动分配节点 id：同类型当前最大 instanceId + 1 */
     private fun autoId(kind: NodeKind): Int {
@@ -105,9 +110,16 @@ object NodeRegister {
             if (event is NamingEvent) {
                 val map = directory[kind] ?: return@subscribe
                 val fresh = event.instances
-                    .filter { it.isEnabled && it.isHealthy }
-                    .map { NodeInfo.fromNacos(kind, it) }
-                    .associateBy { it.nodeId }
+                    .filter {
+                        it.isEnabled && it.isHealthy
+                    }
+                    .map {
+                        NodeInfo.fromNacos(kind, it)
+                    }
+                    .associateBy {
+                        it.nodeId
+                    }
+
                 // 移除下线节点的 actor 缓存
                 actorRefs.keys.removeAll { nodeId -> nodeId !in fresh.keys && map[nodeId]?.let { it.kind == kind } == true }
                 map.clear()
@@ -122,19 +134,22 @@ object NodeRegister {
         val map = directory[kind]
         if (map != null) return map.values.toList()
         val list = Nacos.naming.selectInstances(kind.name, Nacos.conf.group, true)
-            .map { NodeInfo.fromNacos(kind, it) }
+            .map {
+                NodeInfo.fromNacos(kind, it)
+            }
         return list
     }
 
     /** 按 id 取某节点信息 */
-    fun nodeOf(kind: NodeKind, nodeId: Int): NodeInfo? =
-        nodesOf(kind).firstOrNull { it.nodeId == nodeId }
+    fun nodeOf(kind: NodeKind, nodeId: Int): NodeInfo? {
+        return nodesOf(kind).firstOrNull { it.nodeId == nodeId }
+    }
 
     /**
      * 取某节点的 ActorRef（挂起解析并缓存；同步写法非阻塞）
      * 远端节点 actor path 首次访问时 resolve，之后直接复用
      */
-    suspend fun actorRefOf(kind: NodeKind, nodeId: Int): akka.actor.ActorRef? {
+    suspend fun actorRefOf(kind: NodeKind, nodeId: Int): ActorRef? {
         actorRefs[nodeId]?.let { return it }
         val info = nodeOf(kind, nodeId) ?: return null
         val selection = Akka.system.actorSelection(info.actorPath)
@@ -144,7 +159,7 @@ object NodeRegister {
     }
 
     /** 负载均衡：随机取一个在线节点 actor（原 LoadBalanceService.getOneXxxServer 语义） */
-    suspend fun randomActorRefOf(kind: NodeKind): akka.actor.ActorRef? {
+    suspend fun randomActorRefOf(kind: NodeKind): ActorRef? {
         val list = nodesOf(kind)
         if (list.isEmpty()) return null
         val info = list.random()

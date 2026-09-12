@@ -41,20 +41,13 @@ abstract class CoroutineActor(
     private val channel = Channel<Envelope>(capacity, onBufferOverflow)
     private var loopJob: Job? = null
 
-    /** 子类实现：挂起式消息处理。执行期间本 actor 的后续消息排队等待 */
-    abstract suspend fun onMessage(msg: Any, sender: ActorRef?)
-
-    /** akka 外壳 onReceive：转投 Channel，绝不阻塞 mailbox 线程 */
-    final override fun onReceive(message: Any) {
-        val envelope = Envelope(message, sender())
-        if (!channel.trySend(envelope).isSuccess) {
-            logger.warn { "channel full/closed, drop msg: $message" }
-        }
-    }
-
     /** actor 启动：拉起消费协程（并发度=1，串行消费 Channel） */
     override fun preStart() {
-        val scope = CoroutineScope(com.jacey.game.common.framework.process.Dispatcher.Actor + CoroutineName(self().path().name()))
+        val scope = CoroutineScope(
+            com.jacey.game.common.framework.process.Dispatcher.Actor + CoroutineName(
+                self().path().name()
+            )
+        )
         loopJob = scope.launch {
             for (envelope in channel) {
                 try {
@@ -72,4 +65,16 @@ abstract class CoroutineActor(
         // postStop 不能挂起；runBlocking 仅发生在进程关闭路径
         loopJob?.let { runBlocking { it.join() } }
     }
+
+    /** akka 外壳 onReceive：转投 Channel，绝不阻塞 mailbox 线程 */
+    final override fun onReceive(message: Any) {
+        val envelope = Envelope(message, sender())
+        if (!channel.trySend(envelope).isSuccess) {
+            logger.warn { "channel full/closed, drop msg: $message" }
+        }
+    }
+
+
+    /** 子类实现：挂起式消息处理。执行期间本 actor 的后续消息排队等待 */
+    abstract suspend fun onMessage(msg: Any, sender: ActorRef?)
 }

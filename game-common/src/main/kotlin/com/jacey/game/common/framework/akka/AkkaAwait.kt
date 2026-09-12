@@ -6,6 +6,7 @@ import akka.actor.ActorSelection
 import akka.pattern.Patterns
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import java.util.concurrent.CompletionStage
 import kotlin.coroutines.resume
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -20,32 +21,31 @@ import kotlin.time.Duration.Companion.seconds
  */
 
 /** 挂起式 ask：向目标 actor 发消息并挂起等待回复（非阻塞）。业务侧配合 as 转型使用 */
-suspend fun ActorRef.askAwait(
-    msg: Any,
-    timeout: Duration = 5.seconds,
-): Any? = suspendCancellableCoroutine { cont ->
-    val future: java.util.concurrent.CompletionStage<Any> =
-        Patterns.ask(this, msg, java.time.Duration.ofMillis(timeout.inWholeMilliseconds))
-    future.whenComplete { result, error ->
-        when {
-            error != null -> cont.cancel(error)
-            else -> cont.resume(result)
+suspend fun ActorRef.askAwait(msg: Any, timeout: Duration = 5.seconds): Any? {
+    return suspendCancellableCoroutine { cont ->
+        val future: CompletionStage<Any> =
+            Patterns.ask(this, msg, java.time.Duration.ofMillis(timeout.inWholeMilliseconds))
+        future.whenComplete { result, error ->
+            when {
+                error != null -> cont.cancel(error)
+                else -> cont.resume(result)
+            }
         }
+
+        // 协程被取消时（调用方超时/actor 关闭），取消底层 ask 防止泄漏
+        cont.invokeOnCancellation { future.toCompletableFuture().cancel(true) }
     }
-    // 协程被取消时（调用方超时/actor 关闭），取消底层 ask 防止泄漏
-    cont.invokeOnCancellation { future.toCompletableFuture().cancel(true) }
 }
 
 /** askAwait 的带类型版本：调用点写 askAwaitAs<Foo>(msg) */
 @Suppress("UNCHECKED_CAST")
-suspend fun <T> ActorRef.askAwaitAs(
-    msg: Any,
-    timeout: Duration = 5.seconds,
-): T = askAwait(msg, timeout) as T
+suspend fun <T> ActorRef.askAwaitAs(msg: Any, timeout: Duration = 5.seconds): T {
+    return askAwait(msg, timeout) as T
+}
 
 /** 挂起式 actorSelection 解析：把 path 解析为 ActorRef（桥接 resolveOneCS，非阻塞） */
-suspend fun ActorSelection.resolveAwait(timeout: Duration = 5.seconds): ActorRef =
-    suspendCancellableCoroutine { cont ->
+suspend fun ActorSelection.resolveAwait(timeout: Duration = 5.seconds): ActorRef {
+    return suspendCancellableCoroutine { cont ->
         val future = resolveOneCS(java.time.Duration.ofMillis(timeout.inWholeMilliseconds))
         future.whenComplete { ref, error ->
             when {
@@ -53,5 +53,9 @@ suspend fun ActorSelection.resolveAwait(timeout: Duration = 5.seconds): ActorRef
                 else -> cont.resume(ref)
             }
         }
-        cont.invokeOnCancellation { future.toCompletableFuture().cancel(true) }
+
+        cont.invokeOnCancellation {
+            future.toCompletableFuture().cancel(true)
+        }
     }
+}
