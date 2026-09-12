@@ -6,18 +6,25 @@ import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.db.redis.SessionIdRedis
 
-/** TableConfig：SystemConfig.xlsx 参数表（object 单例，原 TableConfigManager） */
+/**
+ * 系统参数表（原 SystemConfig.xlsx 固化为代码常量，无需配置文件）
+ *
+ * 原表内容：
+ * usernameMaxLength=18 用户名最大长度
+ * passwordMinLength=8  密码最小长度
+ * passwordMaxLength=18 密码最大长度
+ * nicknameMaxLength=8  昵称最大长度
+ */
 object TableConfig {
-    private val cache = HashMap<String, String>()
+    private val configs = mapOf(
+        "usernameMaxLength" to "18",
+        "passwordMinLength" to "8",
+        "passwordMaxLength" to "18",
+        "nicknameMaxLength" to "8",
+    )
 
-    @Synchronized
-    fun load(entries: Map<String, String>) {
-        cache.clear()
-        cache.putAll(entries)
-    }
-
-    fun systemInt(key: String): Int? = cache[key]?.toIntOrNull()
-    fun systemString(key: String): String? = cache[key]
+    fun systemInt(key: String): Int? = configs[key]?.toIntOrNull()
+    fun systemString(key: String): String? = configs[key]
 }
 
 /**

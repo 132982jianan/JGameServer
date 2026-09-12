@@ -41,8 +41,6 @@ tasks.shadowJar {
     // 只用 mergeReferenceConf 任务生成的正确合并文件
     exclude("reference.conf")
     exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
-    // Nacos 客户端自带 log4j2 配置会干扰本工程日志，排除
-    exclude("log4j2.xml", "log4j2-test.xml")
 }
 
 
