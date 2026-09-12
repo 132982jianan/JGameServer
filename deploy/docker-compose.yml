@@ -21,8 +21,9 @@ services:
       - ./data/nacos:/home/nacos/data
       - ./logs/nacos:/home/nacos/logs
     ports:
-      - "8848:8848"
-      - "9848:9848"
+      - "8848:8848"   # 主 API
+      - "9848:9848"   # gRPC
+      - "38080:8080"  # v3 控制台（容器内 8080；宿主 8080 已被 GM HTTP 占用）
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8080/v3/console/health/readiness || exit 1"]
       interval: 5s

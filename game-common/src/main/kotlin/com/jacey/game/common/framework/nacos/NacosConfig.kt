@@ -15,8 +15,8 @@ data class NacosConfig(
     val namespace: String = "public",
     /** 分组 */
     val group: String = "DEFAULT_GROUP",
-    /** 用户名 */
-    val username: String = "nacos",
+    /** 用户名（v3 服务端 auth 关闭时不传，避免 403 登录噪音） */
+    val username: String = "",
     /** 密码 */
-    val password: String = "nacos",
+    val password: String = "",
 ) : Config

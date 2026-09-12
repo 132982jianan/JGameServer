@@ -32,8 +32,8 @@ object Nacos {
         val properties = Properties()
         properties.setProperty(PropertyKeyConst.SERVER_ADDR, "${conf.host}:${conf.port}")
         properties.setProperty(PropertyKeyConst.NAMESPACE, conf.namespace)
-        properties.setProperty(PropertyKeyConst.USERNAME, conf.username)
-        properties.setProperty(PropertyKeyConst.PASSWORD, conf.password)
+        if (conf.username.isNotEmpty()) properties.setProperty(PropertyKeyConst.USERNAME, conf.username)
+        if (conf.password.isNotEmpty()) properties.setProperty(PropertyKeyConst.PASSWORD, conf.password)
         naming = NacosFactory.createNamingService(properties)
         config = NacosFactory.createConfigService(properties)
         Exit.addExitListener { close() }
