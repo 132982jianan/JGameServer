@@ -2,18 +2,15 @@ package com.jacey.game.common
 
 import akka.actor.ActorRef
 import akka.actor.ActorSystem
+import akka.actor.Props
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.framework.akka.askAwait
 import com.jacey.game.common.msg.NetMessage
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import org.junit.jupiter.api.Test
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.Duration.Companion.seconds
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 /**
  * 协程包装 Akka 专项验证（本次重构重点）：
@@ -48,7 +45,7 @@ class CoroutineActorTest {
     @Test
     fun `askAwait suspends and returns reply`() { runBlocking {
         val system = ActorSystem.create("test-echo")
-        val actor = system.actorOf(akka.actor.Props.create(EchoActor::class.java), "echo")
+        val actor = system.actorOf(Props.create(EchoActor::class.java), "echo")
 
         val startThread = Thread.currentThread()
         val reply = withTimeout(3000) {
@@ -68,7 +65,7 @@ class CoroutineActorTest {
         val concurrent = AtomicInteger(0)
         val order = Channel<Int>(Channel.UNLIMITED)
         val actor = system.actorOf(
-            akka.actor.Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow"
+            Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow"
         )
 
         // 连发 5 条消息
@@ -98,7 +95,7 @@ class CoroutineActorTest {
         // 5 个不同 actor，各自处理挂起 200ms；共享小线程池时若阻塞则无法并发
         val actors = (0 until 5).map { i ->
             system.actorOf(
-                akka.actor.Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow$i"
+                Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow$i"
             ) to i
         }
         actors.forEach { (ref, i) ->

@@ -23,6 +23,7 @@ echo [1/6] Building server fat jar with Gradle...
 call gradlew.bat :server:shadowJar --console=plain -q
 if errorlevel 1 goto build_failed
 
+
 echo [2/6] Checking Docker Desktop...
 where docker >nul 2>&1
 if errorlevel 1 goto docker_not_found

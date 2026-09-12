@@ -1,0 +1,5 @@
+# 部署运行期产物不入库
+# 数据卷 bind 目录（mongo/redis/nacos 数据）
+data/
+# 各节点与 nacos 日志
+logs/

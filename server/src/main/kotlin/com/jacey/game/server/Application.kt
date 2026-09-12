@@ -22,7 +22,8 @@ suspend fun main(args: Array<String>) {
         System.setProperty("logDir", args[kindIdx + 1])
     }
 
-    val parser = ArgParser("jgame-server")
+    // GNU 风格：同时支持 "--kind gateway" 与 "--kind=gateway"（部署 command 用等号写法）
+    val parser = ArgParser("jgame-server", prefixStyle = ArgParser.OptionPrefixStyle.GNU)
     val kind by parser.option(
         ArgType.Choice<NodeKind>(),
         fullName = "kind",

@@ -50,6 +50,7 @@ suspend fun ActorSelection.resolveAwait(timeout: Duration = 5.seconds): ActorRef
         future.whenComplete { ref, error ->
             when {
                 error != null -> cont.cancel(error)
+                // 重点!!! 转为ActorRef
                 else -> cont.resume(ref)
             }
         }

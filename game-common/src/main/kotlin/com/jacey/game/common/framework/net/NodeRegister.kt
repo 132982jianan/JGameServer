@@ -161,7 +161,9 @@ object NodeRegister {
     /** 负载均衡：随机取一个在线节点 actor（原 LoadBalanceService.getOneXxxServer 语义） */
     suspend fun randomActorRefOf(kind: NodeKind): ActorRef? {
         val list = nodesOf(kind)
-        if (list.isEmpty()) return null
+        if (list.isEmpty()) {
+            return null
+        }
         val info = list.random()
         return actorRefOf(kind, info.nodeId)
     }

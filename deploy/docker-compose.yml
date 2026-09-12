@@ -1,79 +1,86 @@
 name: jgame-server-local
 
-x-server-defaults: &server-defaults
-  image: ${NODE_IMAGE}
-  restart: unless-stopped
-  working_dir: /app
-  shm_size: 256m
-  volumes:
-    - ../server/build/libs/server-all.jar:/app/server-all.jar:ro
-    - ../game-common/src/main/resources/conf:/app/conf:ro
-  networks:
-    - jgame-net
+# 参考部署约定（同 slm_20260523 game 部署）：
+# - 节点服务直接写 command 字符串：java -jar ../lib/server.jar --kind=xxx
+# - working_dir: /app/bin，jar 挂到 /app/lib，日志落 working_dir 下 logs/
+# - 数据用 named volume（mongo/redis/nacos）
 
 services:
   nacos:
     image: ${NACOS_IMAGE}
     container_name: jgame-nacos
-    restart: unless-stopped
     environment:
-      MODE: standalone
-      NACOS_AUTH_ENABLE: "false"
+      - TZ=Asia/Shanghai
+      - MODE=standalone
+      - NACOS_AUTH_ENABLE=false
+      # v3 镜像启动脚本强制要求这三个变量（即使 auth 关闭），填占位值
+      - NACOS_AUTH_TOKEN=SecretKey012345678901234567890123456789012345678901234567890123456789
+      - NACOS_AUTH_IDENTITY_KEY=serverIdentity
+      - NACOS_AUTH_IDENTITY_VALUE=jgame
+    volumes:
+      - ./data/nacos:/home/nacos/data
+      - ./logs/nacos:/home/nacos/logs
     ports:
       - "8848:8848"
       - "9848:9848"
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/v3/console/health/readiness || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 30
       start_period: 20s
-    networks:
-      - jgame-net
+    restart: on-failure
 
   mongo:
     image: ${MONGO_IMAGE}
     container_name: jgame-mongo
-    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data/mongo:/data/db
     ports:
       - "27017:27017"
-    volumes:
-      - mongo-data:/data/db
     healthcheck:
       test: ["CMD-SHELL", "mongosh --quiet --host localhost:27017 --eval \"db.adminCommand('ping').ok\""]
       interval: 5s
       timeout: 5s
       retries: 30
       start_period: 15s
-    networks:
-      - jgame-net
+    restart: on-failure
 
   redis:
     image: ${REDIS_IMAGE}
     container_name: jgame-redis
-    restart: unless-stopped
+    environment:
+      - TZ=Asia/Shanghai
+    volumes:
+      - ./data/redis:/data
     ports:
       - "6379:6379"
-    volumes:
-      - redis-data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 30
       start_period: 5s
-    networks:
-      - jgame-net
+    restart: on-failure
 
   jgame-gm:
-    <<: *server-defaults
+    image: ${NODE_IMAGE}
+    working_dir: /app/bin
+    shm_size: 256m
     container_name: jgame-gm
     hostname: jgame-gm
-    command: ["java", "-jar", "server-all.jar", "--kind", "gm"]
+    command: java -jar ../lib/server-all.jar --kind=gm
     environment:
-      NACOS_HOST: nacos
-      MONGO_HOST: mongo
-      REDIS_HOST: redis
+      - TZ=Asia/Shanghai
+      - NACOS_HOST=nacos
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
+    volumes:
+      - ../server/build/libs/server-all.jar:/app/lib/server-all.jar:ro
+      - ../game-common/src/main/resources/conf:/app/conf:ro
+      - ./logs:/app/bin/logs
     ports:
       - "8080:80"      # GM HTTP
       - "20000:20000"  # akka artery
@@ -84,16 +91,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: on-failure
 
   jgame-logic:
-    <<: *server-defaults
+    image: ${NODE_IMAGE}
+    working_dir: /app/bin
+    shm_size: 256m
     container_name: jgame-logic
     hostname: jgame-logic
-    command: ["java", "-jar", "server-all.jar", "--kind", "logic", "--id", "1"]
+    command: java -jar ../lib/server-all.jar --kind=logic --id=1
     environment:
-      NACOS_HOST: nacos
-      MONGO_HOST: mongo
-      REDIS_HOST: redis
+      - TZ=Asia/Shanghai
+      - NACOS_HOST=nacos
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
+    volumes:
+      - ../server/build/libs/server-all.jar:/app/lib/server-all.jar:ro
+      - ../game-common/src/main/resources/conf:/app/conf:ro
+      - ./logs:/app/bin/logs
     ports:
       - "30000:30000"
     depends_on:
@@ -105,16 +120,24 @@ services:
         condition: service_healthy
       jgame-gm:
         condition: service_started
+    restart: on-failure
 
   jgame-battle:
-    <<: *server-defaults
+    image: ${NODE_IMAGE}
+    working_dir: /app/bin
+    shm_size: 256m
     container_name: jgame-battle
     hostname: jgame-battle
-    command: ["java", "-jar", "server-all.jar", "--kind", "battle", "--id", "1"]
+    command: java -jar ../lib/server-all.jar --kind=battle --id=1
     environment:
-      NACOS_HOST: nacos
-      MONGO_HOST: mongo
-      REDIS_HOST: redis
+      - TZ=Asia/Shanghai
+      - NACOS_HOST=nacos
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
+    volumes:
+      - ../server/build/libs/server-all.jar:/app/lib/server-all.jar:ro
+      - ../game-common/src/main/resources/conf:/app/conf:ro
+      - ./logs:/app/bin/logs
     ports:
       - "40000:40000"
     depends_on:
@@ -126,16 +149,24 @@ services:
         condition: service_healthy
       jgame-gm:
         condition: service_started
+    restart: on-failure
 
   jgame-chat:
-    <<: *server-defaults
+    image: ${NODE_IMAGE}
+    working_dir: /app/bin
+    shm_size: 256m
     container_name: jgame-chat
     hostname: jgame-chat
-    command: ["java", "-jar", "server-all.jar", "--kind", "chat", "--id", "1"]
+    command: java -jar ../lib/server-all.jar --kind=chat --id=1
     environment:
-      NACOS_HOST: nacos
-      MONGO_HOST: mongo
-      REDIS_HOST: redis
+      - TZ=Asia/Shanghai
+      - NACOS_HOST=nacos
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
+    volumes:
+      - ../server/build/libs/server-all.jar:/app/lib/server-all.jar:ro
+      - ../game-common/src/main/resources/conf:/app/conf:ro
+      - ./logs:/app/bin/logs
     ports:
       - "50000:50000"
     depends_on:
@@ -147,16 +178,24 @@ services:
         condition: service_healthy
       jgame-gm:
         condition: service_started
+    restart: on-failure
 
   jgame-gateway:
-    <<: *server-defaults
+    image: ${NODE_IMAGE}
+    working_dir: /app/bin
+    shm_size: 256m
     container_name: jgame-gateway
     hostname: jgame-gateway
-    command: ["java", "-jar", "server-all.jar", "--kind", "gateway", "--id", "1"]
+    command: java -jar ../lib/server-all.jar --kind=gateway --id=1
     environment:
-      NACOS_HOST: nacos
-      MONGO_HOST: mongo
-      REDIS_HOST: redis
+      - TZ=Asia/Shanghai
+      - NACOS_HOST=nacos
+      - MONGO_HOST=mongo
+      - REDIS_HOST=redis
+    volumes:
+      - ../server/build/libs/server-all.jar:/app/lib/server-all.jar:ro
+      - ../game-common/src/main/resources/conf:/app/conf:ro
+      - ./logs:/app/bin/logs
     ports:
       - "10001:10001"  # 客户端 TCP 入口
       - "10002:10002"  # 客户端 WebSocket 入口
@@ -170,11 +209,4 @@ services:
         condition: service_healthy
       jgame-gm:
         condition: service_started
-
-networks:
-  jgame-net:
-    driver: bridge
-
-volumes:
-  mongo-data:
-  redis-data:
+    restart: on-failure
