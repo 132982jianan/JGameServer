@@ -41,7 +41,7 @@ object LogicStart {
         AkkaRefs.logicServerActor = AkkaCreates.createLogicServerActor()
         AkkaRefs.loginActor = AkkaCreates.createLoginActor()
         if (conf.isMainLogicServer) {
-            AkkaCreates.createRegistActor()
+            AkkaRefs.registActor = AkkaCreates.createRegistActor()
             AkkaRefs.matchActor = AkkaCreates.createMatchActor()
         }
         return true

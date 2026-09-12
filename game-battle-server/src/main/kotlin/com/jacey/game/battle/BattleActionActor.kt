@@ -1,5 +1,6 @@
 package com.jacey.game.battle
 
+import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.msg.NetMessage
@@ -24,20 +25,20 @@ class BattleActionActor : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
 
     init {
-        registerHandler(NetMessage::class.java) { msg, sender -> onNetMessage(msg) }
+        registerHandler(NetMessage::class.java) { msg, sender -> onNetMessage(msg, sender) }
     }
 
-    private suspend fun onNetMessage(msg: NetMessage) {
+    private suspend fun onNetMessage(msg: NetMessage, sender: ActorRef?) {
         when (msg.rpcNum) {
-            Rpc.RpcNameEnum.GetBattleInfo_VALUE -> onGetBattleInfo(msg)
-            Rpc.RpcNameEnum.PlacePieces_VALUE -> onPlacePieces(msg)
-            Rpc.RpcNameEnum.Concede_VALUE -> onConcede(msg)
-            Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> onReadyToStartGame(msg)
+            Rpc.RpcNameEnum.GetBattleInfo_VALUE -> onGetBattleInfo(msg, sender)
+            Rpc.RpcNameEnum.PlacePieces_VALUE -> onPlacePieces(msg, sender)
+            Rpc.RpcNameEnum.Concede_VALUE -> onConcede(msg, sender)
+            Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> onReadyToStartGame(msg, sender)
             else -> throw RpcErrorException(Rpc.RpcErrorCodeEnum.ServerError_VALUE)
         }
     }
 
-    private suspend fun onGetBattleInfo(msg: NetMessage) {
+    private suspend fun onGetBattleInfo(msg: NetMessage, sender: ActorRef?) {
         val userId = msg.userId
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
             ?: throw RpcErrorException(Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
@@ -59,10 +60,10 @@ class BattleActionActor : BaseMessageActor() {
         }
         val builder = BaseBattle.GetBattleInfoResponse.newBuilder()
             .setBattleInfo(battleInfoBuilder)
-        sender()?.tell(buildResponse(userId, Rpc.RpcNameEnum.GetBattleInfo_VALUE, builder), null)
+        sender?.tell(buildResponse(userId, Rpc.RpcNameEnum.GetBattleInfo_VALUE, builder), null)
     }
 
-    private suspend fun onPlacePieces(msg: NetMessage) {
+    private suspend fun onPlacePieces(msg: NetMessage, sender: ActorRef?) {
         val userId = msg.userId
         val req = msg.getProto<BaseBattle.PlacePiecesRequest>()
             ?: throw RpcErrorException(Rpc.RpcErrorCodeEnum.ServerError_VALUE)
@@ -99,10 +100,10 @@ class BattleActionActor : BaseMessageActor() {
         BaseBattleActor.pushEventListToOne(opponentUserId, eventMsgList)
         val builder = BaseBattle.PlacePiecesResponse.newBuilder()
             .setEventList(eventMsgList)
-        sender()?.tell(buildResponse(userId, Rpc.RpcNameEnum.PlacePieces_VALUE, builder), null)
+        sender?.tell(buildResponse(userId, Rpc.RpcNameEnum.PlacePieces_VALUE, builder), null)
     }
 
-    private suspend fun onConcede(msg: NetMessage) {
+    private suspend fun onConcede(msg: NetMessage, sender: ActorRef?) {
         val userId = msg.userId
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
             ?: throw RpcErrorException(Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
@@ -118,10 +119,10 @@ class BattleActionActor : BaseMessageActor() {
         BaseBattleActor.pushEventListToOne(opponentUserId, eventMsgList)
         val builder = BaseBattle.ConcedeResponse.newBuilder()
             .setEventList(eventMsgList)
-        sender()?.tell(buildResponse(userId, Rpc.RpcNameEnum.Concede_VALUE, builder), null)
+        sender?.tell(buildResponse(userId, Rpc.RpcNameEnum.Concede_VALUE, builder), null)
     }
 
-    private suspend fun onReadyToStartGame(msg: NetMessage) {
+    private suspend fun onReadyToStartGame(msg: NetMessage, sender: ActorRef?) {
         val userId = msg.userId
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
             ?: throw RpcErrorException(Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
@@ -135,7 +136,7 @@ class BattleActionActor : BaseMessageActor() {
             BaseBattleActor.startFirstTurn(battleId)
         }
         val builder = BaseBattle.ReadyToStartGameResponse.newBuilder()
-        sender()?.tell(buildResponse(userId, Rpc.RpcNameEnum.ReadyToStartGame_VALUE, builder), null)
+        sender?.tell(buildResponse(userId, Rpc.RpcNameEnum.ReadyToStartGame_VALUE, builder), null)
     }
 
     private fun buildResponse(

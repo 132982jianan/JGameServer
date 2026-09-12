@@ -32,8 +32,8 @@ class BattleServerActor : BaseMessageActor() {
         registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
         registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
         registerHandler(NetMessage::class.java) { msg, sender ->
-            // 客户端对战请求交给房间管理 actor
-            BattleRooms.proxyNetMessage(msg, sender())
+            // 客户端对战请求交给房间管理
+            BattleRooms.proxyNetMessage(msg, sender)
         }
     }
 

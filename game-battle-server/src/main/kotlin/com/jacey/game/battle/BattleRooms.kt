@@ -119,10 +119,8 @@ object BattleRooms {
     }
 
     /** 推送消息给某个用户（经 gateway ResponseActor 转发） */
-    fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage) {
-        val sessionId = kotlinx.coroutines.runBlocking {
-            com.jacey.game.db.redis.SessionIdRedis.getOneUserIdToSessionId(userId)
-        }
+    suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage) {
+        val sessionId = com.jacey.game.db.redis.SessionIdRedis.getOneUserIdToSessionId(userId)
         if (sessionId != null) {
             getGatewayResponseActor(sessionId)?.tell(netMsg, ActorRef.noSender())
         }

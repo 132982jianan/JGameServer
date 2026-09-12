@@ -33,7 +33,9 @@ import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
 import io.netty.handler.timeout.IdleStateHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import com.jacey.game.common.framework.process.Dispatcher
 
 /**
  * Netty 服务器（object 单例）
@@ -131,8 +133,8 @@ object NettyServer {
             val session = SessionManager.remove(channel)
             val sessionId = SessionManager.sessionIdOf(channel)
             if (session != null && sessionId != null) {
-                // 异步执行断线处理（redis 清理 + 跨服通知）
-                kotlinx.coroutines.runBlocking {
+                // 断线处理含挂起 Redis/远端通知，异步调度，不阻塞 netty event loop
+                CoroutineScope(Dispatcher.Actor).launch {
                     SessionManager.removeSession(sessionId)
                 }
             }

@@ -90,10 +90,6 @@ object MessageRouter {
         } else false
     }
 
-    fun sendErrorToClient(msg: NetMessage, errorCode: Int, sender: ActorRef?) {
-        sender?.tell(NetMessage(msg.rpcNum, errorCode), ActorRef.noSender())
-    }
-
     /** 强制下线推送（logic 通知 gateway 用） */
     fun forceOffline(sessionId: Int, reason: CommonEnum.ForceOfflineReasonEnum) {
         val channel = SessionManager.channelOf(sessionId) ?: run {

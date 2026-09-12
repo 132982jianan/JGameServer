@@ -13,6 +13,8 @@ import com.jacey.game.common.util.DateTimeUtil
 import com.jacey.game.common.util.StringUtil
 import com.jacey.game.db.service.PlayUserService
 import com.jacey.game.db.redis.SessionIdRedis
+import com.jacey.game.db.service.BattleInfoService
+import com.jacey.game.common.framework.net.NodeRegister
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -24,10 +26,10 @@ class LoginActor : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
 
     init {
-        registerHandler(NetMessage::class.java) { msg, sender -> onLogin(msg) }
+        registerHandler(NetMessage::class.java) { msg, sender -> onLogin(msg, sender) }
     }
 
-    private suspend fun onLogin(msg: NetMessage) {
+    private suspend fun onLogin(msg: NetMessage, sender: ActorRef?) {
         val sessionId = msg.sessionId
         val request = msg.getProto<CommonMsg.LoginRequest>()
         if (request == null) {
@@ -79,11 +81,12 @@ class LoginActor : BaseMessageActor() {
                 }
             }
         }
-        // 6. 绑定 sessionId <-> userId
+        // 6. 绑定 sessionId <-> userId，并记录会话路由到本 logic（gateway 断线通知依据）
         SessionIdRedis.setOneUserIdToSessionId(userId, sessionId)
         SessionIdRedis.setOneSessionIdToUserId(sessionId, userId)
+        BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NodeRegister.selfId)
         // 7. 记录该玩家的 gateway ResponseActor
-        OnlineClients.addSessionIdToGatewayResponseActor(sessionId, sender())
+        OnlineClients.addSessionIdToGatewayResponseActor(sessionId, sender)
         // 8. 修改玩家在线状态
         com.jacey.game.db.service.PlayStateService.changeUserOnlineState(userId, true)
         // 9. 更新登录信息
@@ -95,6 +98,6 @@ class LoginActor : BaseMessageActor() {
             .setUserInfo(PlayUserService.getUserInfoByUserId(userId))
         val respMsg = NetMessage(Rpc.RpcNameEnum.Login_VALUE, builder)
         respMsg.userId = userId
-        sender()?.tell(respMsg, ActorRef.noSender())
+        sender?.tell(respMsg, ActorRef.noSender())
     }
 }

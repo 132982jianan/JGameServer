@@ -40,7 +40,7 @@ class BattleRoomManagerProxy : BaseMessageActor() {
                 RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE -> {
                     val request = msg.getProto<RemoteServer.NoticeBattleServerCreateNewBattleRequest>()
                     if (request != null) {
-                        BattleRooms.createNewBattle(request, sender())
+                        BattleRooms.createNewBattle(request, sender)
                     }
                 }
                 RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE -> {

@@ -146,6 +146,3 @@ class LocalMessage(rpcNum: Int, lite: Any? = null) : AbstractMessage() {
         this.lite = lite
     }
 }
-
-/** 用于区分远程服务器响应的信封（gateway ChannelActor 内部用） */
-class NetResponseMessage(val netMessage: NetMessage)

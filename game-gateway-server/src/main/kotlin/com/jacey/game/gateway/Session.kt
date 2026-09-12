@@ -130,6 +130,7 @@ object SessionManager {
             )
             ref?.tell(remoteMsg, ActorRef.noSender())
         }
+        BattleInfoService.removeOneSessionIdToLogicServerId(sessionId)
 
         // battle / chat 通知
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)

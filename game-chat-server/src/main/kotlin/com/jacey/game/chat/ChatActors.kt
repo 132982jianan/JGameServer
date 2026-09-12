@@ -30,19 +30,15 @@ object ChatRooms {
 
     fun getChatRoomActor(battleId: String): ActorRef? = battleIdToChatRoomActor[battleId]
 
-    fun addChatRoomActor(battleId: String, actor: ActorRef) {
+    suspend fun addChatRoomActor(battleId: String, actor: ActorRef) {
         battleIdToChatRoomActor[battleId] = actor
         // battleId <-> chatServerId 绑定
-        kotlinx.coroutines.runBlocking {
-            BattleInfoService.setOneBattleIdToChatServerId(battleId, NodeRegister.selfId)
-        }
+        BattleInfoService.setOneBattleIdToChatServerId(battleId, NodeRegister.selfId)
     }
 
-    fun removeChatRoomActor(battleId: String) {
+    suspend fun removeChatRoomActor(battleId: String) {
         battleIdToChatRoomActor.remove(battleId)
-        kotlinx.coroutines.runBlocking {
-            BattleInfoService.setOneBattleIdToChatServerId(battleId, 0)
-        }
+        BattleInfoService.setOneBattleIdToChatServerId(battleId, 0)
     }
 
     fun addGatewayResponseActor(sessionId: Int, actor: ActorRef?) {
@@ -95,7 +91,7 @@ class ChatServerActor : BaseMessageActor() {
         registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
         registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
         registerHandler(NetMessage::class.java) { msg, sender ->
-            ChatRoomManagerProxy.dispatchNetMessage(msg, sender())
+            ChatRoomManagerProxy.dispatchNetMessage(msg, sender)
         }
     }
 
@@ -175,11 +171,11 @@ class ChatServerActor : BaseMessageActor() {
 class ChatRoomManagerProxy : BaseMessageActor() {
 
     init {
-        registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
+        registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
         registerHandler(NetMessage::class.java, ::onNet)
     }
 
-    private suspend fun onRemote(msg: RemoteMessage) {
+    private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
         when (msg.rpcNum) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE -> {
                 val request = msg.getProto<RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest>() ?: return
@@ -192,7 +188,7 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                         )
                         ChatRooms.addChatRoomActor(battleId, actor)
                         val response = RemoteServer.NoticeChatServerCreateNewBattleChatRoomResponse.newBuilder()
-                        sender()?.tell(
+                        sender?.tell(
                             RemoteMessage(
                                 RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
                                 response
@@ -216,7 +212,7 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                 val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
                 val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
                 if (chatRoom == null) {
-                    sender()?.tell(
+                    sender?.tell(
                         NetMessage(
                             msg.rpcNum,
                             com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
@@ -224,20 +220,17 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                     )
                     return
                 }
-                ChatRooms.addGatewayResponseActor(msg.sessionId, sender())
+                ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
                 chatRoom.tell(msg, sender)
             }
         }
     }
 
     companion object {
-        /** 由 ChatServerActor 调用的静态分发 */
-        fun dispatchNetMessage(msg: NetMessage, sender: ActorRef?) {
-            // 直接路由（聊天服内单级分发，无需经过 actor 延迟）
+        /** 由 ChatServerActor 调用的静态分发（挂起版：不阻塞 Actor 线程） */
+        suspend fun dispatchNetMessage(msg: NetMessage, sender: ActorRef?) {
             val userId = msg.userId
-            val battleId = kotlinx.coroutines.runBlocking {
-                BattleInfoService.getBattleUserIdToBattleId(userId)
-            }
+            val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
             val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
             if (chatRoom != null) {
                 ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
@@ -247,7 +240,8 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                     NetMessage(
                         msg.rpcNum,
                         com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
-                    ), null
+                    ),
+                    null
                 )
             }
         }

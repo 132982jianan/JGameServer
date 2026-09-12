@@ -1,69 +1,78 @@
 package com.jacey.game.gateway.actor
 
+import akka.actor.ActorRef
+import akka.actor.Props
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.NetMessage
-import com.jacey.game.common.proto3.CommonEnum
-import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.gateway.MessageRouter
 import com.jacey.game.gateway.Session
-import com.jacey.game.gateway.SessionManager
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * 客户端会话 Actor（原 ChannelActor）
  *
- * 每个客户端连接绑定一个；处理客户端 NetMessage：
- * - Regist/Login → logic
- * - Match/CancelMatch → main logic
+ * 每个客户端连接绑定一个；只处理客户端"请求"（NetMessage）：
+ * - Regist/Match/CancelMatch → main logic
+ * - Login → 随机 logic
  * - 对战操作 → battle（须在对战中）
  * - 聊天 → chat（须在对战中）
  *
- * 全部 handler 为 suspend：转发等待、Redis 查询不阻塞线程。
+ * 回包/推送通道分离：转发时以子 ResponseActor 为 sender，backend 回包
+ * 进入 GatewayResponseActor 直接写回客户端——绝不能再进入本 actor
+ * （否则响应会被当作新客户端请求再次转发，形成 gateway↔backend 死循环）。
  */
 class ClientSessionActor(private val session: Session) : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
 
+    /** 本会话的响应通道：backend 回包/推送的唯一入口 */
+    private lateinit var responseActor: ActorRef
+
     init {
         registerHandler(NetMessage::class.java) { msg, _ -> onNetMessage(msg) }
-        registerHandler(ResponseMessage::class.java) { msg, _ -> onResponse(msg) }
+    }
+
+    override fun preStart() {
+        super.preStart()
+        responseActor = context().actorOf(
+            Props.create(GatewayResponseActor::class.java) { GatewayResponseActor(session) },
+            "response"
+        )
     }
 
     private suspend fun onNetMessage(msg: NetMessage) {
         log.info { "【客户端消息】sessionId=${session.sessionId} rpcNum=${msg.rpcNum} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
-        val sessionId = session.sessionId
         msg.userId = session.userId
-        msg.sessionId = sessionId
+        msg.sessionId = session.sessionId
 
         when (msg.rpcNum) {
             Rpc.RpcNameEnum.Regist_VALUE -> {
                 if (session.userId > 0) {
                     log.error { "【注册异常】已登录用户不能重复注册 userId=${session.userId}" }
-                    MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE, self())
+                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
                     return
                 }
                 msg.userIp = session.userIp
-                if (!MessageRouter.forwardToMainLogic(msg, self())) {
-                    MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE, self())
+                if (!MessageRouter.forwardToMainLogic(msg, responseActor)) {
+                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
             Rpc.RpcNameEnum.Login_VALUE -> {
                 if (session.userId > 0) {
                     log.error { "【登录异常】已登录用户不能重复登录 userId=${session.userId}" }
-                    MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE, self())
+                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
                     return
                 }
                 msg.userIp = session.userIp
-                if (!MessageRouter.forwardToLogic(msg, self())) {
-                    MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE, self())
+                if (!MessageRouter.forwardToLogic(msg, responseActor)) {
+                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
             Rpc.RpcNameEnum.Match_VALUE, Rpc.RpcNameEnum.CancelMatch_VALUE -> {
                 if (session.userId > 0) {
-                    if (!MessageRouter.forwardToMainLogic(msg, self())) {
-                        MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE, self())
+                    if (!MessageRouter.forwardToMainLogic(msg, responseActor)) {
+                        replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                     }
                 } else {
                     session.close()
@@ -76,11 +85,11 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                 if (session.userId > 0) {
                     val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
                     if (battleId != null) {
-                        if (!MessageRouter.forwardToBattle(msg, self())) {
-                            MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE, self())
+                        if (!MessageRouter.forwardToBattle(msg, responseActor)) {
+                            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                         }
                     } else {
-                        MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE, self())
+                        replyError(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
                     }
                 } else {
                     session.close()
@@ -90,11 +99,11 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                 if (session.userId > 0) {
                     val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
                     if (battleId != null) {
-                        if (!MessageRouter.forwardToChat(msg, self())) {
-                            MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE, self())
+                        if (!MessageRouter.forwardToChat(msg, responseActor)) {
+                            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                         }
                     } else {
-                        MessageRouter.sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE, self())
+                        replyError(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE)
                     }
                 }
             }
@@ -104,16 +113,31 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
         }
     }
 
-    /** 处理远端服务器响应：写回客户端；登录成功同时绑定 userId */
-    private suspend fun onResponse(msg: ResponseMessage) {
-        val net = msg.netMessage
-        if (net.rpcNum == Rpc.RpcNameEnum.Login_VALUE &&
-            net.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE) {
-            session.userId = net.userId
-        }
-        session.write(net)
+    /** 错误响应直达客户端：写 netty channel，不做任何 actor 间转发（杜绝回环） */
+    private fun replyError(msg: NetMessage, errorCode: Int) {
+        session.write(NetMessage(msg.rpcNum, errorCode))
     }
 }
 
-/** 远端响应信封（原 NetResponseMessage 的 gateway 侧用法） */
-class ResponseMessage(val netMessage: NetMessage)
+/**
+ * 会话响应 Actor（原 ResponseActor）
+ *
+ * backend（logic/battle/chat）的回包与推送以本 actor 为 sender，
+ * 收到的任何 NetMessage 都只是"要写给客户端的响应"，直接落 channel：
+ * - 与 ClientSessionActor（请求通道）物理分离，响应不会被再次路由
+ * - 登录成功响应在此绑定 session.userId
+ */
+class GatewayResponseActor(private val session: Session) : BaseMessageActor() {
+    private val log = KotlinLogging.logger {}
+
+    init {
+        registerHandler(NetMessage::class.java) { msg, _ ->
+            if (msg.rpcNum == Rpc.RpcNameEnum.Login_VALUE &&
+                msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE
+            ) {
+                session.userId = msg.userId
+            }
+            session.write(msg)
+        }
+    }
+}

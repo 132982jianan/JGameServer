@@ -24,13 +24,13 @@ class RegistActor : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
 
     init {
-        registerHandler(NetMessage::class.java) { msg, _ -> onRegist(msg) }
+        registerHandler(NetMessage::class.java) { msg, sender -> onRegist(msg, sender) }
     }
 
-    private suspend fun onRegist(msg: NetMessage) {
+    private suspend fun onRegist(msg: NetMessage, sender: ActorRef?) {
         val request = msg.getProto<com.jacey.game.common.proto3.CommonMsg.RegistRequest>()
         if (request == null) {
-            sendError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
+            sendError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE, sender)
             return
         }
         log.info { "【req Regist】username=${request.username}" }
@@ -51,11 +51,11 @@ class RegistActor : BaseMessageActor() {
         PlayUserService.createNewUser(entity)
 
         val builder = com.jacey.game.common.proto3.CommonMsg.RegistResponse.newBuilder()
-        sender()?.tell(NetMessage(Rpc.RpcNameEnum.Regist_VALUE, builder), ActorRef.noSender())
+        sender?.tell(NetMessage(Rpc.RpcNameEnum.Regist_VALUE, builder), ActorRef.noSender())
     }
 
-    private fun sendError(msg: NetMessage, errorCode: Int) {
-        sender()?.tell(NetMessage(msg.rpcNum, errorCode), ActorRef.noSender())
+    private fun sendError(msg: NetMessage, errorCode: Int, sender: ActorRef?) {
+        sender?.tell(NetMessage(msg.rpcNum, errorCode), ActorRef.noSender())
     }
 
     // username 长度限制 + 只能数字/字母
