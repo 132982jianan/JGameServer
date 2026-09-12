@@ -49,6 +49,10 @@ object NettyServer {
     /** 客户端心跳裸字符串（GUI ClientHandler 发送，非帧格式） */
     private val HEARTBEAT_BYTES = "hb_request".toByteArray(Charsets.UTF_8)
 
+    /** channel -> session actor 缓存键（保证每连接仅创建一次 actor） */
+    private val SESSION_ACTOR_KEY =
+        io.netty.util.AttributeKey.valueOf<akka.actor.ActorRef>("sessionActorKey")
+
     private val bossGroup = NioEventLoopGroup(4)
     private val workerGroup = NioEventLoopGroup()
 
@@ -97,12 +101,17 @@ object NettyServer {
             when (msg) {
                 is NetMessage -> {
                     val session = SessionManager.sessionOf(ctx.channel())
-                    val actor = session?.let { actorOf(it) }
-                    if (actor != null) {
-                        actor.tell(msg, null)
-                    } else {
+                    if (session == null) {
                         logger.warn { "no session bound, drop msg rpcNum=${msg.rpcNum}" }
+                        return
                     }
+                    // 每个连接只创建一次 session actor（channel attribute 缓存）
+                    var actor = ctx.channel().attr(SESSION_ACTOR_KEY).get()
+                    if (actor == null) {
+                        actor = actorOf(session)
+                        ctx.channel().attr(SESSION_ACTOR_KEY).set(actor)
+                    }
+                    actor.tell(msg, null)
                 }
                 else -> ctx.fireChannelRead(msg)
             }
