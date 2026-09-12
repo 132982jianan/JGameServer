@@ -38,6 +38,7 @@ public class GatewayActor extends UntypedAbstractActor {
 
     /**
      * GatewayActor 启动时调用
+     *
      * @throws Exception
      */
     @Override
@@ -85,7 +86,7 @@ public class GatewayActor extends UntypedAbstractActor {
                     break;
                 }
             }
-        } else if (o instanceof RemoteMessage){
+        } else if (o instanceof RemoteMessage) {
             /** 服务器之间通讯消息处理 */
             RemoteMessage remoteMessage = (RemoteMessage) o;
             int errorCode = remoteMessage.getErrorCode();
@@ -142,22 +143,29 @@ public class GatewayActor extends UntypedAbstractActor {
 
     /**
      * Actor定时推送任务
-     * @param initialDelaySecond    延迟时间（单位：秒）
-     * @param intervalSecond        间隔时间（单位：秒）
-     * @param msg                   定时发送的消息
+     *
+     * @param initialDelaySecond 延迟时间（单位：秒）
+     * @param intervalSecond     间隔时间（单位：秒）
+     * @param msg                定时发送的消息（给自己）
      * @return
      */
     private Cancellable schedule(int initialDelaySecond, int intervalSecond, IMessage msg) {
         // 获取当前Actor的ActorSystem，
         ActorSystem system = context().system();
         // 定时通知当前Actor，本地消息体LocalMessage，让其发起GM注册远程操作
-        return system.scheduler().schedule(Duration.create(initialDelaySecond, TimeUnit.SECONDS),
-                Duration.create(intervalSecond, TimeUnit.SECONDS), getSelf(), msg, system.dispatcher(),
-                ActorRef.noSender());
+        return system.scheduler().schedule(
+                Duration.create(initialDelaySecond, TimeUnit.SECONDS),
+                Duration.create(intervalSecond, TimeUnit.SECONDS),
+                getSelf(),
+                msg,
+                system.dispatcher(),
+                ActorRef.noSender()
+        );
     }
 
     /**
      * 监测到GM断线后，开启定时任务，尝试重新连接
+     *
      * @param t
      * @throws Exception
      */

@@ -22,6 +22,7 @@
         <module>game-battle-server</module>
         <module>game-chat-server</module>
         <module>game-db</module>
+        <module>TicTacToe-GUI</module>
     </modules>
 
     <packaging>pom</packaging>
