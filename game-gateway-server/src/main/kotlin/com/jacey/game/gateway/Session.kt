@@ -1,7 +1,11 @@
 package com.jacey.game.gateway
 
 import akka.actor.ActorRef
+import com.jacey.game.common.framework.net.NodeKind
+import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.msg.RemoteMessage
+import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.redis.SessionIdRedis
 import io.netty.channel.Channel
@@ -22,7 +26,10 @@ class Session(val channel: Channel) {
     var userId: Int = 0
     val userIp: String? = (channel.remoteAddress() as? java.net.InetSocketAddress)?.address?.hostAddress
 
-    val sessionId: Int get() = SessionManager.sessionIdOf(channel) ?: 0
+    val sessionId: Int
+        get() {
+            return SessionManager.sessionIdOf(channel) ?: 0
+        }
 
     fun write(msg: NetMessage) {
         if (channel.isActive && channel.isWritable) {
@@ -30,7 +37,9 @@ class Session(val channel: Channel) {
         }
     }
 
-    fun writeAndFlushBinary(msg: NetMessage) = write(msg)
+    fun writeAndFlushBinary(msg: NetMessage) {
+        write(msg)
+    }
 
     fun close() {
         channel.close()
@@ -49,6 +58,11 @@ object SessionManager {
     val NETTY_CHANNEL_TO_SESSION = AttributeKey.valueOf<Session>("nettyChannelToSessionKey")
     val NETTY_CHANNEL_TO_SESSION_ID = AttributeKey.valueOf<Int>("nettyChannelToSessionIdKey")
 
+    val onlineCount: Int
+        get() {
+            return sessionIdToChannel.size
+        }
+
     fun attach(channel: Channel, sessionId: Int): Session {
         val session = Session(channel)
         channel.attr(NETTY_CHANNEL_TO_SESSION).set(session)
@@ -58,18 +72,27 @@ object SessionManager {
         return session
     }
 
-    fun sessionOf(channel: Channel): Session? = channel.attr(NETTY_CHANNEL_TO_SESSION).get()
-    fun sessionIdOf(channel: Channel): Int? = channel.attr(NETTY_CHANNEL_TO_SESSION_ID).get()
-    fun channelOf(sessionId: Int): Channel? = sessionIdToChannel[sessionId]
+    fun sessionOf(channel: Channel): Session? {
+        return channel.attr(NETTY_CHANNEL_TO_SESSION).get()
+    }
+
+    fun sessionIdOf(channel: Channel): Int? {
+        return channel.attr(NETTY_CHANNEL_TO_SESSION_ID).get()
+    }
+
+    fun channelOf(sessionId: Int): Channel? {
+        return sessionIdToChannel[sessionId]
+    }
+
     fun remove(channel: Channel): Session? {
         sessionIdToChannel.remove(sessionIdOf(channel) ?: 0)
         return channelIdToSession.remove(channel.id().hashCode())
     }
 
-    val onlineCount: Int get() = sessionIdToChannel.size
-
     /** 新建 sessionId（Redis 自增，suspend） */
-    suspend fun newSessionId(): Int = SessionIdRedis.addAndGetNextAvailableSessionId().toInt()
+    suspend fun newSessionId(): Int {
+        return SessionIdRedis.addAndGetNextAvailableSessionId().toInt()
+    }
 
     /**
      * 会话断线处理（原 OnlineClientManager.removeSession + noticeClientOffline）：
@@ -93,17 +116,17 @@ object SessionManager {
         // 通知 logic（原 GatewayNoticeClientOfflinePush）
         val logicServerId = BattleInfoService.getOneSessionIdToLogicServerId(sessionId)
         if (logicServerId != null && logicServerId > 0) {
-            val push = com.jacey.game.common.proto3.RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
+            val push = RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
                 .setSessionId(sessionId)
                 .setUserId(userId)
                 .setIsUserOffline(isUserOffline)
                 .build()
-            val remoteMsg = com.jacey.game.common.msg.RemoteMessage(
-                com.jacey.game.common.proto3.RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
+            val remoteMsg = RemoteMessage(
+                RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
                 push
             )
-            val ref = com.jacey.game.common.framework.net.NodeRegister.actorRefOf(
-                com.jacey.game.common.framework.net.NodeKind.logic, logicServerId
+            val ref = NodeRegister.actorRefOf(
+                NodeKind.logic, logicServerId
             )
             ref?.tell(remoteMsg, ActorRef.noSender())
         }
@@ -116,19 +139,23 @@ object SessionManager {
                 BattleInfoService.getOneBattleIdToChatServerId(battleId)
             ).forEach { serverId ->
                 if (serverId != null && serverId > 0) {
-                    val push = com.jacey.game.common.proto3.RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
+                    val push = RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
                         .setSessionId(sessionId)
                         .setUserId(userId)
                         .setIsUserOffline(isUserOffline)
                         .build()
-                    val remoteMsg = com.jacey.game.common.msg.RemoteMessage(
-                        com.jacey.game.common.proto3.RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
+                    val remoteMsg = RemoteMessage(
+                        RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
                         push
                     )
-                    val kind = if (serverId == BattleInfoService.getOneBattleIdToBattleServerId(battleId))
-                        com.jacey.game.common.framework.net.NodeKind.battle
-                    else com.jacey.game.common.framework.net.NodeKind.chat
-                    val ref = com.jacey.game.common.framework.net.NodeRegister.actorRefOf(kind, serverId)
+
+                    val kind = if (serverId == BattleInfoService.getOneBattleIdToBattleServerId(battleId)) {
+                        NodeKind.battle
+                    } else {
+                        NodeKind.chat
+                    }
+
+                    val ref = NodeRegister.actorRefOf(kind, serverId)
                     ref?.tell(remoteMsg, ActorRef.noSender())
                 }
             }

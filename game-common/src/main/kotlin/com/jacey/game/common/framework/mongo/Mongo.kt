@@ -30,8 +30,8 @@ object Mongo {
     /** 连接配置（conf/mongo.yml）；环境变量 MONGO_URI/MONGO_HOST 优先 */
     @Serializable
     data class MongoConfig(
-        val connectionString: String = System.getenv("MONGO_URI")
-            ?: ("mongodb://" + (System.getenv("MONGO_HOST") ?: "127.0.0.1") + ":27017"),
+        val connectionString: String = System.getenv("MONGO_URI")?.takeIf { it.isNotBlank() }
+            ?: ("mongodb://" + (System.getenv("MONGO_HOST")?.takeIf { it.isNotBlank() } ?: "127.0.0.1") + ":27017"),
         val databaseName: String = System.getenv("MONGO_DB") ?: "jgame_server",
     ) : Config
 

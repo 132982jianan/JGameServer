@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class NacosConfig(
     /** Nacos 服务器地址（环境变量 NACOS_HOST 优先） */
-    val host: String = System.getenv("NACOS_HOST") ?: "127.0.0.1",
+    val host: String = System.getenv("NACOS_HOST")?.takeIf { it.isNotBlank() } ?: "127.0.0.1",
     /** Nacos 端口 */
     val port: Int = 8848,
     /** 命名空间 */

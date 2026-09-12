@@ -55,6 +55,14 @@ object Akka {
           actor {
             provider = remote
             allow-java-serialization = off
+            serializers {
+              net = "com.jacey.game.common.serialize.NetMessageSerializer"
+              remote = "com.jacey.game.common.serialize.RemoteMessageSerializer"
+            }
+            serialization-bindings {
+              "com.jacey.game.common.msg.NetMessage" = net
+              "com.jacey.game.common.msg.RemoteMessage" = remote
+            }
           }
           remote {
             artery {
@@ -79,6 +87,14 @@ object Akka {
           actor {
             provider = local
             allow-java-serialization = off
+            serializers {
+              net = "com.jacey.game.common.serialize.NetMessageSerializer"
+              remote = "com.jacey.game.common.serialize.RemoteMessageSerializer"
+            }
+            serialization-bindings {
+              "com.jacey.game.common.msg.NetMessage" = net
+              "com.jacey.game.common.msg.RemoteMessage" = remote
+            }
           }
         }
         """.trimIndent()

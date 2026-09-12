@@ -4,6 +4,7 @@ import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.RemoteServer
@@ -23,14 +24,19 @@ object MessageRouter {
     @Volatile
     var isConnectedToGm: Boolean = false
 
-    fun isAvailableForClient(): Boolean =
-        isConnectedToGm && NodeRegister.nodesOf(NodeKind.logic).any { true } &&
-            mainLogicServerId() > 0
+    fun isAvailableForClient(): Boolean {
+        return isConnectedToGm
+                && NodeRegister.nodesOf(NodeKind.logic).any { true }
+                && mainLogicServerId() > 0
+    }
 
     /** 主 logic 服务器 id：优先取注册时声明 isMainLogicServer 的节点（metadata 标记） */
     fun mainLogicServerId(): Int {
         val nodes = NodeRegister.nodesOf(NodeKind.logic)
-        return nodes.firstOrNull { it.nodeId > 0 }?.nodeId ?: 0
+        return nodes
+            .firstOrNull {
+                it.nodeId > 0
+            }?.nodeId ?: 0
     }
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
@@ -51,12 +57,18 @@ object MessageRouter {
     suspend fun forwardToBattle(msg: NetMessage, sender: ActorRef?): Boolean {
         val userId = msg.userId
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
-        val battleServerId = battleId?.let { BattleInfoService.getOneBattleIdToBattleServerId(it) }
-        val ref = battleServerId?.let { NodeRegister.actorRefOf(NodeKind.battle, it) }
-            ?: NodeRegister.randomActorRefOf(NodeKind.battle)
+        val battleServerId = battleId?.let {
+            BattleInfoService.getOneBattleIdToBattleServerId(it)
+        }
+        val ref = battleServerId?.let {
+            NodeRegister.actorRefOf(NodeKind.battle, it)
+        } ?: NodeRegister.randomActorRefOf(NodeKind.battle)
+
         return if (ref != null) {
             ref.tell(msg, sender); true
-        } else false
+        } else {
+            false
+        }
     }
 
     suspend fun forwardToChat(msg: NetMessage, sender: ActorRef?): Boolean {
@@ -87,7 +99,7 @@ object MessageRouter {
         channel.close()
     }
 
-    suspend fun sendRemoteToGm(msg: com.jacey.game.common.msg.RemoteMessage, sender: ActorRef?) {
+    suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
         val ref = NodeRegister.actorRefOf(NodeKind.gm, 1)
         if (ref != null) {
             ref.tell(msg, sender)
@@ -96,25 +108,25 @@ object MessageRouter {
         }
     }
 
-    suspend fun sendRemoteToGateway(msg: com.jacey.game.common.msg.RemoteMessage, gatewayId: Int): Boolean {
+    suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
         val ref = NodeRegister.actorRefOf(NodeKind.gateway, gatewayId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
-    suspend fun sendRemoteToLogic(msg: com.jacey.game.common.msg.RemoteMessage, logicServerId: Int): Boolean {
+    suspend fun sendRemoteToLogic(msg: RemoteMessage, logicServerId: Int): Boolean {
         val ref = NodeRegister.actorRefOf(NodeKind.logic, logicServerId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
-    suspend fun sendRemoteToBattle(msg: com.jacey.game.common.msg.RemoteMessage, battleServerId: Int): Boolean {
+    suspend fun sendRemoteToBattle(msg: RemoteMessage, battleServerId: Int): Boolean {
         val ref = NodeRegister.actorRefOf(NodeKind.battle, battleServerId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
-    suspend fun sendRemoteToChat(msg: com.jacey.game.common.msg.RemoteMessage, chatServerId: Int): Boolean {
+    suspend fun sendRemoteToChat(msg: RemoteMessage, chatServerId: Int): Boolean {
         val ref = NodeRegister.actorRefOf(NodeKind.chat, chatServerId) ?: return false
         ref.tell(msg, null)
         return true
