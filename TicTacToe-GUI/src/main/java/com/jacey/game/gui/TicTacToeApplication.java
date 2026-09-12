@@ -15,6 +15,8 @@ import org.springframework.context.annotation.ComponentScan;
 public class TicTacToeApplication {
     public static void main(String[] args) {
         SpringApplication app = new SpringApplication(TicTacToeApplication.class);
+        // Swing 客户端必须运行在非 headless 模式（Spring Boot 默认强制 java.awt.headless=true）
+        app.setHeadless(false);
         app.addListeners(new ApplicationReadyEventListener());
         app.run(args);
     }

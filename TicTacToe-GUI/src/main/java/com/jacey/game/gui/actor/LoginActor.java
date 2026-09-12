@@ -119,6 +119,7 @@ public class LoginActor extends BaseMessageActor {
                 log.error("【注册响应】 无法注册，密码非法....");
                 String str = "Unable to register, the password is illegal";
                 JOptionPane.showMessageDialog(null, str);
+                break;
             } case Rpc.RpcErrorCodeEnum.ServerError_VALUE: { //服务器内部错误
                 log.error("【注册响应】 服务器内部错误....");
                 String str = "Internal server error";
