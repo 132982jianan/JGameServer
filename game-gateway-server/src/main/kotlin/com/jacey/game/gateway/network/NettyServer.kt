@@ -46,12 +46,26 @@ object NettyServer {
     private val logger = KotlinLogging.logger {}
     private const val HEADER_LENGTH = 12
 
+    /** 客户端心跳裸字符串（GUI ClientHandler 发送，非帧格式） */
+    private val HEARTBEAT_BYTES = "hb_request".toByteArray(Charsets.UTF_8)
+
     private val bossGroup = NioEventLoopGroup(4)
     private val workerGroup = NioEventLoopGroup()
 
     /** TCP 自定义解码器：处理粘包/拆包 */
     class ProtocolDecoder : ByteToMessageDecoder() {
         override fun decode(ctx: ChannelHandlerContext, buf: io.netty.buffer.ByteBuf, out: MutableList<Any>) {
+            // 客户端心跳是裸字符串 "hb_request"（非 12 字节帧），直接剥离
+            if (buf.readableBytes() >= HEARTBEAT_BYTES.size) {
+                buf.markReaderIndex()
+                val possible = ByteArray(HEARTBEAT_BYTES.size)
+                buf.getBytes(buf.readerIndex(), possible)
+                if (possible.contentEquals(HEARTBEAT_BYTES)) {
+                    buf.skipBytes(HEARTBEAT_BYTES.size)
+                    return
+                }
+                buf.resetReaderIndex()
+            }
             val readable = buf.readableBytes()
             if (readable < HEADER_LENGTH) return
             buf.markReaderIndex()
@@ -117,7 +131,10 @@ object NettyServer {
         }
 
         protected open fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
-            Akka.create<ClientSessionActor>("client-" + session.channel.id().asShortText())
+            Akka.system.actorOf(
+                akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
+                "client-" + session.channel.id().asShortText()
+            )
     }
 
     /** WebSocket 帧适配处理 */
@@ -161,7 +178,10 @@ object NettyServer {
         }
 
         override fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
-            Akka.create<ClientSessionActor>("ws-" + session.channel.id().asShortText())
+            Akka.system.actorOf(
+                akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
+                "ws-" + session.channel.id().asShortText()
+            )
     }
 
     suspend fun start() {
