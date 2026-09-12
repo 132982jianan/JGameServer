@@ -32,8 +32,10 @@ object NodeRegister {
     /** 各类型节点的路由表：kind -> (nodeId -> NodeInfo) */
     private val directory = ConcurrentHashMap<NodeKind, ConcurrentHashMap<Int, NodeInfo>>()
 
-    /** 各类型节点的主 actor：nodeId -> resolved ActorRef（惰性解析 + 缓存） */
-    private val actorRefs = ConcurrentHashMap<Int, akka.actor.ActorRef>()
+    /** 各类型节点的主 actor：(kind, nodeId) -> resolved ActorRef（惰性解析 + 缓存）
+     *  key 必须含 kind：所有节点类型 nodeId 都从 1 开始，仅用 nodeId 会串节点（gateway 拿 gm 的 ref 发消息） */
+    private data class ActorCacheKey(val kind: NodeKind, val nodeId: Int)
+    private val actorRefs = ConcurrentHashMap<ActorCacheKey, akka.actor.ActorRef>()
 
     /**
      * 注册本节点到 Nacos
@@ -121,7 +123,7 @@ object NodeRegister {
                     }
 
                 // 移除下线节点的 actor 缓存
-                actorRefs.keys.removeAll { nodeId -> nodeId !in fresh.keys && map[nodeId]?.let { it.kind == kind } == true }
+                actorRefs.keys.removeAll { key -> key.kind == kind && key.nodeId !in fresh.keys }
                 map.clear()
                 map.putAll(fresh)
                 logger.info { "directory[$kind] updated: ${map.keys}" }
@@ -150,11 +152,12 @@ object NodeRegister {
      * 远端节点 actor path 首次访问时 resolve，之后直接复用
      */
     suspend fun actorRefOf(kind: NodeKind, nodeId: Int): ActorRef? {
-        actorRefs[nodeId]?.let { return it }
+        val key = ActorCacheKey(kind, nodeId)
+        actorRefs[key]?.let { return it }
         val info = nodeOf(kind, nodeId) ?: return null
         val selection = Akka.system.actorSelection(info.actorPath)
         val ref = runCatching { selection.resolveAwait() }.getOrNull() ?: return null
-        actorRefs[nodeId] = ref
+        actorRefs[key] = ref
         return ref
     }
 
