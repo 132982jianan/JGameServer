@@ -17,6 +17,7 @@ import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.util.MD5Util
 import com.jacey.game.gui.config.GuiConfig
 import com.jacey.game.gui.service.NetService
+import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.util.UIUtil
 import java.awt.Dimension
 import java.awt.GridBagConstraints

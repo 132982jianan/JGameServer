@@ -6,6 +6,7 @@ import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.redis.SessionIdRedis
 import io.netty.channel.Channel
 import io.netty.util.AttributeKey
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * 每连接会话（原 ChannelActor/ResponseActor 合并精简）
@@ -42,8 +43,8 @@ class Session(val channel: Channel) {
  * - sessionId -> channel（兼容原 OnlineClientManager 索引）
  */
 object SessionManager {
-    private val channelIdToSession = java.util.concurrent.ConcurrentHashMap<Int, Session>()
-    private val sessionIdToChannel = java.util.concurrent.ConcurrentHashMap<Int, Channel>()
+    private val channelIdToSession = ConcurrentHashMap<Int, Session>()
+    private val sessionIdToChannel = ConcurrentHashMap<Int, Channel>()
 
     val NETTY_CHANNEL_TO_SESSION = AttributeKey.valueOf<Session>("nettyChannelToSessionKey")
     val NETTY_CHANNEL_TO_SESSION_ID = AttributeKey.valueOf<Int>("nettyChannelToSessionIdKey")
@@ -102,7 +103,8 @@ object SessionManager {
                 push
             )
             val ref = com.jacey.game.common.framework.net.NodeRegister.actorRefOf(
-                com.jacey.game.common.framework.net.NodeKind.logic, logicServerId)
+                com.jacey.game.common.framework.net.NodeKind.logic, logicServerId
+            )
             ref?.tell(remoteMsg, ActorRef.noSender())
         }
 

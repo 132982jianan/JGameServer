@@ -2,7 +2,7 @@ package com.jacey.game.gui.service
 
 import com.jacey.game.common.proto3.BaseBattle
 import com.jacey.game.gui.service.SessionService
-import com.jacey.game.gui.jframe.ViewManagerService
+import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.jframe.HallFrame
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.swing.JOptionPane

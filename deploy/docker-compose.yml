@@ -6,8 +6,8 @@ x-server-defaults: &server-defaults
   working_dir: /app
   shm_size: 256m
   volumes:
-    - ./server/build/libs/server-all.jar:/app/server-all.jar:ro
-    - ./game-common/src/main/resources/conf:/app/conf:ro
+    - ../server/build/libs/server-all.jar:/app/server-all.jar:ro
+    - ../game-common/src/main/resources/conf:/app/conf:ro
   networks:
     - jgame-net
 

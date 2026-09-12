@@ -6,7 +6,7 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.gui.service.SessionService
-import com.jacey.game.gui.jframe.ViewManagerService
+import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.jframe.BattleFrame
 import com.jacey.game.gui.jframe.HallFrame
 import io.github.oshai.kotlinlogging.KotlinLogging

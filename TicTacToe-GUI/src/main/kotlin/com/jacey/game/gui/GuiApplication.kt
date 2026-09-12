@@ -5,7 +5,7 @@ import com.jacey.game.gui.config.GuiConfig
 import com.jacey.game.gui.service.MessageFactoryService
 import com.jacey.game.gui.service.NetService
 import com.jacey.game.gui.util.UIUtil
-import com.jacey.game.gui.jframe.ViewManagerService
+import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.jframe.LoginFrame
 import io.github.oshai.kotlinlogging.KotlinLogging
 import javax.swing.SwingUtilities

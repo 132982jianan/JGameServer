@@ -7,6 +7,7 @@ import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.gui.service.NetService
 import com.jacey.game.gui.service.SessionService
+import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.util.UIUtil
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.awt.BorderLayout
