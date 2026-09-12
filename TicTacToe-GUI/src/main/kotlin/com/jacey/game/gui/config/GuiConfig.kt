@@ -8,8 +8,8 @@ package com.jacey.game.gui.config
  */
 object GuiConfig {
     /** GM 服务器 HTTP 地址 */
-    var serverHost: String = "127.0.0.1"
-    var serverPort: Int = 80
+    var serverHost: String = System.getenv("GM_HOST")?.takeIf { it.isNotBlank() } ?: "127.0.0.1"
+    var serverPort: Int = System.getenv("GM_PORT")?.toIntOrNull() ?: 8080
 
     /** 心跳（秒）：写空闲 5s 发心跳包 */
     const val SOCKET_WRITER_IDLE_TIME = 5

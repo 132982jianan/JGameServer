@@ -24,19 +24,20 @@ class GmActor : BaseMessageActor() {
                 }
                 // watch 远端节点：断线自动移除注册
                 // sender 为消息信封里的原始发送方（挂起后 context().sender() 已失效，不可用）
-                sender?.let { context().watch(it) }
-                val ok = GmRegistry.registServer(request, sender, self())
+                val from = sender ?: return
+                context().watch(from)
+                val ok = GmRegistry.registServer(request, from, self())
                 if (ok) {
                     val info = request.serverInfo
                     logger.info { "【服务器注册成功】type=${info.serverType} id=${info.serverId}" }
                     val respBuilder = RemoteServer.RegistServerResponse.newBuilder()
-                    sender.tell(
+                    from.tell(
                         RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, respBuilder),
                         self()
                     )
                 } else {
                     logger.error { "【服务器注册失败】has registed, serverType=${request.serverInfo.serverType}" }
-                    sender.tell(
+                    from.tell(
                         RemoteMessage(
                             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE,
                             RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcRegistServerErrorHasRegisted_VALUE

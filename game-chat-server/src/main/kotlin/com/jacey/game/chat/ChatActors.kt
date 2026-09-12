@@ -69,9 +69,14 @@ object ChatMessageRouter {
         return if (sessionId != null) {
             val actor = ChatRooms.getGatewayResponseActor(sessionId)
             if (actor != null) {
-                actor.tell(netMsg, ActorRef.noSender()); true
-            } else false
-        } else false
+                actor.tell(netMsg, ActorRef.noSender())
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
     }
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
@@ -117,6 +122,7 @@ class ChatServerActor : BaseMessageActor() {
                     com.jacey.game.common.framework.process.Exit.exit(0)
                 }
             }
+
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>()
                 ChatRooms.removeGatewayResponseActor(push?.sessionId ?: 0)
@@ -182,15 +188,20 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                 when (chatRoomInfo.chatRoomType.number) {
                     CommonEnum.ChatRoomTypeEnum.TwoPlayerBattleChatRoomType_VALUE -> {
                         val actor = com.jacey.game.common.framework.akka.Akka.create<BaseBattleChatRoomActor>(
-                            "chatRoom-$battleId")
+                            "chatRoom-$battleId"
+                        )
                         ChatRooms.addChatRoomActor(battleId, actor)
                         val response = RemoteServer.NoticeChatServerCreateNewBattleChatRoomResponse.newBuilder()
                         sender()?.tell(
-                            RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE, response),
+                            RemoteMessage(
+                                RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
+                                response
+                            ),
                             ActorRef.noSender()
                         )
                         logger.info { "对战聊天室初始化完成 battleId=$battleId" }
                     }
+
                     else -> logger.error { "not support chatRoomType=${chatRoomInfo.chatRoomType}" }
                 }
             }
@@ -205,7 +216,12 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                 val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
                 val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
                 if (chatRoom == null) {
-                    sender()?.tell(NetMessage(msg.rpcNum, com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
+                    sender()?.tell(
+                        NetMessage(
+                            msg.rpcNum,
+                            com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
+                        ), null
+                    )
                     return
                 }
                 ChatRooms.addGatewayResponseActor(msg.sessionId, sender())
@@ -227,7 +243,12 @@ class ChatRoomManagerProxy : BaseMessageActor() {
                 ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
                 chatRoom.tell(msg, sender)
             } else {
-                sender?.tell(NetMessage(msg.rpcNum, com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
+                sender?.tell(
+                    NetMessage(
+                        msg.rpcNum,
+                        com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
+                    ), null
+                )
             }
         }
     }
