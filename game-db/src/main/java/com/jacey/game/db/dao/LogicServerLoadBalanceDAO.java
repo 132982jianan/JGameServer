@@ -18,6 +18,7 @@ import java.util.Set;
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
+@SuppressWarnings({"SpringJavaInjectionPointsAutowiringInspection", "SpringJavaAutowiringInspection"})
 @Repository(value = "logicServerLoadBalanceDAO")
 public class LogicServerLoadBalanceDAO {
 

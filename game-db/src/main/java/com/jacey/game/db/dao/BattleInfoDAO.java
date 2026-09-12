@@ -14,6 +14,7 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Set;
 
+@SuppressWarnings({"SpringJavaInjectionPointsAutowiringInspection", "SpringJavaAutowiringInspection"})
 @Repository(value = "battleInfoDAO")
 public class BattleInfoDAO {
 

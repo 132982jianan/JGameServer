@@ -16,6 +16,7 @@ import java.util.Map;
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
+@SuppressWarnings({"SpringJavaInjectionPointsAutowiringInspection", "SpringJavaAutowiringInspection"})
 @Repository(value = "sessionIdDAO")
 public class SessionIdDAO {
 

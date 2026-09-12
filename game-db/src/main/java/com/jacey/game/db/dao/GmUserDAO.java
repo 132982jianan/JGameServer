@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
  * @Author: JaceyRuan
  * @Email: jacey.ruan@outlook.com
  */
+@SuppressWarnings({"SpringJavaInjectionPointsAutowiringInspection", "SpringJavaAutowiringInspection"})
 @Repository(value = "GmUserDAO")
 public class GmUserDAO {
 
