@@ -1,9 +1,15 @@
-package com.jacey.game.gui
+package com.jacey.game.gui.jframe
 
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
+import com.jacey.game.gui.service.NetService
+import com.jacey.game.gui.util.UIUtil
+import java.awt.Dimension
+import java.awt.GridBagConstraints
+import java.awt.GridBagLayout
+import java.awt.Insets
 import javax.swing.JButton
 import javax.swing.JFrame
 import kotlin.system.exitProcess
@@ -30,7 +36,7 @@ class HallFrame(private val userInfo: CommonMsg.UserInfo) : JFrame() {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent?) {
-                ServerConnection.disconnect()
+                NetService.disconnect()
                 exitProcess(0)
             }
         })
@@ -43,13 +49,13 @@ class HallFrame(private val userInfo: CommonMsg.UserInfo) : JFrame() {
             override fun mouseClicked(e: MouseEvent?) = onUnmatch()
         })
 
-        layout = java.awt.GridBagLayout()
-        val gc = java.awt.GridBagConstraints()
-        gc.insets = java.awt.Insets(10, 10, 10, 10)
+        layout = GridBagLayout()
+        val gc = GridBagConstraints()
+        gc.insets = Insets(10, 10, 10, 10)
         gc.gridx = 0; gc.gridy = 0
         add(JLabel("玩家昵称"), gc)
         gc.gridx = 1; gc.gridy = 0
-        playerNameText.preferredSize = java.awt.Dimension(160, 28)
+        playerNameText.preferredSize = Dimension(160, 28)
         playerNameText.isEditable = false
         add(playerNameText, gc)
         gc.gridx = 1; gc.gridy = 1
@@ -66,11 +72,11 @@ class HallFrame(private val userInfo: CommonMsg.UserInfo) : JFrame() {
     private fun onMatch() {
         val req = CommonMsg.MatchRequest.newBuilder()
             .setBattleTypeValue(CommonEnum.BattleTypeEnum.BattleTypeTwoPlayer_VALUE)
-        ServerConnection.send(NetMessage(Rpc.RpcNameEnum.Match_VALUE, req))
+        NetService.send(NetMessage(Rpc.RpcNameEnum.Match_VALUE, req))
     }
 
     private fun onUnmatch() {
         val req = CommonMsg.CancelMatchRequest.newBuilder()
-        ServerConnection.send(NetMessage(Rpc.RpcNameEnum.CancelMatch_VALUE, req))
+        NetService.send(NetMessage(Rpc.RpcNameEnum.CancelMatch_VALUE, req))
     }
 }

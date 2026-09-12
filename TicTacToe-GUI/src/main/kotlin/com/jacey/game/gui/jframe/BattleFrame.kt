@@ -1,13 +1,16 @@
-package com.jacey.game.gui
+package com.jacey.game.gui.jframe
 
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.BaseBattle
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
+import com.jacey.game.gui.service.NetService
+import com.jacey.game.gui.service.SessionService
+import com.jacey.game.gui.util.UIUtil
+import io.github.oshai.kotlinlogging.KotlinLogging
 import java.awt.BorderLayout
 import java.awt.Dimension
-import java.awt.Font
 import java.awt.GridLayout
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -23,7 +26,6 @@ import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import javax.swing.JTextField
 import javax.swing.SwingConstants
-import javax.swing.SwingUtilities
 
 /**
  * 对战窗口（原 BattleFrame）
@@ -73,14 +75,14 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         defaultCloseOperation = DO_NOTHING_ON_CLOSE
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent?) {
-                ServerConnection.disconnect()
+                NetService.disconnect()
                 exitProcess(0)
             }
         })
 
         // 解析对战信息
         val briefs = battleInfo.userBriefInfosList
-        val myUserId = Session.userInfo?.userId ?: 0
+        val myUserId = SessionService.userInfo?.userId ?: 0
         opponentUserInfo = briefs.firstOrNull { it.userId != myUserId }
         myUserInfo = briefs.firstOrNull { it.userId == myUserId }
         mySeq = seqOf(myUserId, briefs)
@@ -109,11 +111,11 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
             if (notReadyUserIds.contains(myUserId)) {
                 // 我方未准备 → 发送准备完毕请求
                 val builder = BaseBattle.ReadyToStartGameRequest.newBuilder()
-                ServerConnection.send(NetMessage(Rpc.RpcNameEnum.ReadyToStartGame_VALUE, builder))
+                NetService.send(NetMessage(Rpc.RpcNameEnum.ReadyToStartGame_VALUE, builder))
             }
         }
 
-        Views.battleFrame = this
+        ViewManagerService.battleFrame = this
     }
 
     // ============ 界面构建 ============
@@ -192,13 +194,13 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         val req = BaseBattle.PlacePiecesRequest.newBuilder()
             .setIndex(index)
             .setLastEventNum(lastEventNum)
-        ServerConnection.send(NetMessage(Rpc.RpcNameEnum.PlacePieces_VALUE, req))
+        NetService.send(NetMessage(Rpc.RpcNameEnum.PlacePieces_VALUE, req))
     }
 
     private fun onConcede() {
         logger.info { "投降...." }
         val req = BaseBattle.ConcedeRequest.newBuilder()
-        ServerConnection.send(NetMessage(Rpc.RpcNameEnum.Concede_VALUE, req))
+        NetService.send(NetMessage(Rpc.RpcNameEnum.Concede_VALUE, req))
     }
 
     private fun onSendChat() {
@@ -210,7 +212,7 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
             .setBattleChatTextScope(CommonEnum.BattleChatTextScopeEnum.EveryoneScope)
             .setSendTimestamp(System.currentTimeMillis())
             .setText(sendText)
-        ServerConnection.send(NetMessage(Rpc.RpcNameEnum.BattleChatText_VALUE, builder))
+        NetService.send(NetMessage(Rpc.RpcNameEnum.BattleChatText_VALUE, builder))
         logger.info { "推送聊天文本: $sendText" }
     }
 
@@ -244,5 +246,5 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         return if (idx >= 0) idx + 1 else -1
     }
 
-    private val logger = io.github.oshai.kotlinlogging.KotlinLogging.logger {}
+    private val logger = KotlinLogging.logger {}
 }

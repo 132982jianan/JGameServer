@@ -1,9 +1,22 @@
-package com.jacey.game.gui
+package com.jacey.game.gui.service
 
+import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.gui.config.GuiConfig
+import com.jacey.game.gui.netty.ClientHandler
+import com.jacey.game.gui.netty.ProtocolDecoder
+import com.jacey.game.gui.netty.ProtocolEncoder
 import io.github.oshai.kotlinlogging.KotlinLogging
+import io.netty.bootstrap.Bootstrap
+import io.netty.channel.Channel
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioSocketChannel
+import io.netty.handler.timeout.IdleStateHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
 import java.net.URL
 
 /**
@@ -13,14 +26,14 @@ import java.net.URL
  * 1. HTTP GET http://gmHost:gmPort/gateway 获取网关地址 ip:port
  * 2. Netty TCP 连接网关（复用与 gateway 相同的线协议编解码）
  */
-object ServerConnection {
+object NetService {
     private val logger = KotlinLogging.logger {}
 
-    var channel: io.netty.channel.Channel? = null
+    var channel: Channel? = null
         internal set
     val isConnected: Boolean get() = channel?.isActive == true
 
-    private var workerGroup: io.netty.channel.nio.NioEventLoopGroup? = null
+    private var workerGroup: NioEventLoopGroup? = null
 
     /**
      * 连接网关（挂起）：GM HTTP 取地址 → Netty connect
@@ -46,19 +59,19 @@ object ServerConnection {
         logger.info { "获取到网关地址: $host:$port" }
 
         // 2. Netty 客户端连接
-        val group = io.netty.channel.nio.NioEventLoopGroup()
+        val group = NioEventLoopGroup()
         workerGroup = group
-        val bootstrap = io.netty.bootstrap.Bootstrap()
+        val bootstrap = Bootstrap()
         bootstrap.group(group)
-            .channel(io.netty.channel.socket.nio.NioSocketChannel::class.java)
-            .remoteAddress(java.net.InetSocketAddress(host, port))
-            .handler(object : io.netty.channel.ChannelInitializer<io.netty.channel.socket.SocketChannel>() {
-                override fun initChannel(ch: io.netty.channel.socket.SocketChannel) {
+            .channel(NioSocketChannel::class.java)
+            .remoteAddress(InetSocketAddress(host, port))
+            .handler(object : ChannelInitializer<SocketChannel>() {
+                override fun initChannel(ch: SocketChannel) {
                     val p = ch.pipeline()
-                    p.addLast(GuiNetty.ProtocolDecoder())
-                    p.addLast(GuiNetty.ProtocolEncoder())
-                    p.addLast(io.netty.handler.timeout.IdleStateHandler(0, GuiConfig.SOCKET_WRITER_IDLE_TIME, 0))
-                    p.addLast(GuiNetty.ClientHandler())
+                    p.addLast(ProtocolDecoder())
+                    p.addLast(ProtocolEncoder())
+                    p.addLast(IdleStateHandler(0, GuiConfig.SOCKET_WRITER_IDLE_TIME, 0))
+                    p.addLast(ClientHandler())
                 }
             })
         val future = bootstrap.connect().sync()
@@ -67,7 +80,7 @@ object ServerConnection {
     }
 
     /** 发送消息到网关（非阻塞 write） */
-    fun send(msg: com.jacey.game.common.msg.NetMessage): Boolean {
+    fun send(msg: NetMessage): Boolean {
         val ch = channel
         if (ch != null && ch.isActive && ch.isWritable) {
             ch.writeAndFlush(msg)

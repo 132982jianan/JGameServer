@@ -1,4 +1,4 @@
-package com.jacey.game.gui
+package com.jacey.game.gui.util
 
 import java.awt.Font
 import javax.swing.JFrame

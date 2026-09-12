@@ -1,4 +1,4 @@
-package com.jacey.game.gui
+package com.jacey.game.gui.config
 
 /**
  * GUI 客户端配置（原 propertyConfig.xml 固化为代码常量）
