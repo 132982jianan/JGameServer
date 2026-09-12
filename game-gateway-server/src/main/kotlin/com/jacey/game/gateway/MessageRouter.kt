@@ -40,18 +40,27 @@ object MessageRouter {
     }
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
-        val ref = NodeRegister.randomActorRefOf(NodeKind.logic) ?: return false
+        val ref = NodeRegister.randomActorRefOf(NodeKind.logic) ?: run {
+            KotlinLogging.logger {}.error { "【转发失败】logic 不可用 rpcNum=${msg.rpcNum}" }
+            return false
+        }
+        KotlinLogging.logger {}.info { "【转发 logic】rpcNum=${msg.rpcNum} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }
 
     suspend fun forwardToMainLogic(msg: NetMessage, sender: ActorRef?): Boolean {
+        val logger = KotlinLogging.logger {}
         val mainId = mainLogicServerId()
         val ref = if (mainId > 0) NodeRegister.actorRefOf(NodeKind.logic, mainId) else null
             ?: NodeRegister.randomActorRefOf(NodeKind.logic)
-        return if (ref != null) {
-            ref.tell(msg, sender); true
-        } else false
+        if (ref == null) {
+            logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.rpcNum} mainId=$mainId" }
+            return false
+        }
+        logger.info { "【转发 mainLogic】rpcNum=${msg.rpcNum} mainId=$mainId sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        ref.tell(msg, sender)
+        return true
     }
 
     suspend fun forwardToBattle(msg: NetMessage, sender: ActorRef?): Boolean {

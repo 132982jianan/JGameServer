@@ -1,6 +1,5 @@
 package com.jacey.game.gateway.actor
 
-import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.CommonEnum
@@ -33,6 +32,7 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
     }
 
     private suspend fun onNetMessage(msg: NetMessage) {
+        log.info { "【客户端消息】sessionId=${session.sessionId} rpcNum=${msg.rpcNum} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
         val sessionId = session.sessionId
         msg.userId = session.userId
         msg.sessionId = sessionId

@@ -8,6 +8,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.LocalServer
+import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
@@ -32,8 +33,23 @@ class LogicServerActor : BaseMessageActor() {
     init {
         registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
         registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
-        registerHandler(NetMessage::class.java) { msg, _ ->
-            logger.warn { "LogicServerActor got unexpected NetMessage rpcNum=${msg.rpcNum}" }
+        registerHandler(NetMessage::class.java) { msg, sender ->
+            // 顶层分发：按 rpcNum 投递给业务子 actor（原 MessageManager.handleRequest）
+            val target = when (msg.rpcNum) {
+                Rpc.RpcNameEnum.Regist_VALUE -> AkkaRefs.registActor
+                Rpc.RpcNameEnum.Login_VALUE -> AkkaRefs.loginActor
+                Rpc.RpcNameEnum.Match_VALUE,
+                Rpc.RpcNameEnum.CancelMatch_VALUE,
+                Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> AkkaRefs.matchActor
+                else -> null
+            }
+            if (target != null) {
+                logger.info { "【分发】rpcNum=${msg.rpcNum} -> ${target.path().name()} sender=${sender?.path() ?: "noSender"}" }
+                target.tell(msg, sender)
+            } else {
+                logger.error { "【分发失败】无业务 actor 处理 rpcNum=${msg.rpcNum}" }
+                sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), self())
+            }
         }
     }
 
