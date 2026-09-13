@@ -16,20 +16,6 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 object MessageRouterService {
     private val logger = KotlinLogging.logger {}
 
-    private var logicServerActorRef: ActorRef? = null
-
-    @Volatile
-    var isConnectedToGm: Boolean = false
-
-    /** logic 主 actor（注册响应 watch 用） */
-    fun bindSelf(actor: ActorRef) {
-        logicServerActorRef = actor
-    }
-
-    fun isAvailableForUpdateLoadBalance(): Boolean {
-        return isConnectedToGm
-    }
-
     /** 推送 NetMessage 到指定 session 的客户端 */
     fun sendNetMsgToOneSession(sessionId: Int, netMsg: NetMessage): Boolean {
         val gatewayResponseActor = OnlineClientService.getGatewayResponseActor(sessionId)
@@ -78,10 +64,5 @@ object MessageRouterService {
         val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
         ref.tell(msg, null)
         return true
-    }
-
-    suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
-        ref?.tell(msg, sender) ?: logger.error { "gm actor not found" }
     }
 }

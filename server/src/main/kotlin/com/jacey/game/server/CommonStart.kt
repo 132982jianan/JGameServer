@@ -3,6 +3,7 @@ package com.jacey.game.server
 import com.jacey.game.battle.BattleStart
 import com.jacey.game.chat.ChatStart
 import com.jacey.game.common.framework.nacos.Nacos
+import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.process.Exit
 import com.jacey.game.common.framework.process.Log4j2
@@ -32,8 +33,10 @@ object CommonStart {
             return false
         }
 
-        // 4. 节点注册 + ActorSystem（artery 地址进 Nacos metadata）
-        if (!NacosService.start(kind, requestedId, kind.actorName)) {
+        // 4. 节点注册 + ActorSystem（artery 地址/对外端口进 Nacos metadata）
+        val connectPath = if (kind == NodeKind.gateway) AppConfig.instance.gatewayConnectPath else ""
+        val isMainLogic = kind == NodeKind.logic && AppConfig.instance.isMainLogicServer
+        if (!NacosService.start(kind, requestedId, kind.actorName, connectPath, isMainLogic)) {
             System.err.println("node register fail")
             return false
         }

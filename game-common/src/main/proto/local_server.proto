@@ -7,8 +7,6 @@ option optimize_for = SPEED;
 enum LocalRpcNameEnum {
 	NoneLocal = 0;						 // 由于proto3中enum首位必须是0所以设置该标识字段
 
-	LocalRpcRegistToGmServer = 300001;           // 向GM服务器注册
-
 	LocalRpcLogicServerMatch = 310001;           // logicServer循环通知自己进行匹配计算
 
 	LocalRpcBattleServerInitBattle = 320001;     // battleServer通知初始化战斗

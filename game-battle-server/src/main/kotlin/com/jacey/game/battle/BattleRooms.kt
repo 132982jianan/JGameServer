@@ -108,9 +108,6 @@ object BattleRooms {
             BattleInfoService.removeBattleUserIdToBattleId(userId)
         }
         BattleInfoService.removeOneBattleIdToBattleServerId(battleId)
-        if (MessageRouterB.isConnectedToGm) {
-            // 负载更新由 NodeRegister 周期上报替代
-        }
     }
 
     /** 推送消息给某个用户（经 gateway ResponseActor 转发） */

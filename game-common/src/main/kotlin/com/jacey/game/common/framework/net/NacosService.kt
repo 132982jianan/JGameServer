@@ -40,7 +40,13 @@ object NacosService {
      * @param kind        节点类型
      * @param requestedId 指定节点 id；null = 自动分配（当前同类型最大 id + 1）
      */
-    fun start(kind: NodeKind, requestedId: Int?, actorName: String): Boolean {
+    fun start(
+        kind: NodeKind,
+        requestedId: Int?,
+        actorName: String,
+        connectPath: String = "",
+        isMainLogicServer: Boolean = false,
+    ): Boolean {
         netConfig = ConfigLoader.load<NetConfig>() ?: return false
 
         val ports = netConfig.portOf(kind, requestedId ?: 1)
@@ -63,6 +69,8 @@ object NacosService {
             publicTcp = finalPorts.tcp,
             publicWs = finalPorts.ws,
             publicHttp = finalPorts.http,
+            connectPath = connectPath,
+            isMainLogicServer = isMainLogicServer,
         )
 
         val instance = selfNodeInfo.toNacos()

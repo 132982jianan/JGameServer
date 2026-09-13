@@ -207,13 +207,6 @@ object BattleInfoService {
         c.hset(k(RKeys.BATTLE_ID_TO_CHAT_SERVER_ID), Redis.key(battleId), chatServerId.toString())
     }
 
-    /** gatewayId -> 客户端连接地址（原 gatewayIdToConnectPath） */
-    suspend fun setOneGatewayConnectPath(gatewayId: Int, connectPath: String) {
-        c.hset(k("gatewayIdToConnectPath"), Redis.key(gatewayId.toString()), connectPath)
-    }
-
-    suspend fun getOneGatewayConnectPath(gatewayId: Int): String? =
-        c.hget(k("gatewayIdToConnectPath"), Redis.key(gatewayId.toString()))
 
     suspend fun getOneBattleIdToChatServerId(battleId: String): Int? =
         c.hget(k(RKeys.BATTLE_ID_TO_CHAT_SERVER_ID), Redis.key(battleId))?.toIntOrNull()

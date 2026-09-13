@@ -2,22 +2,13 @@ package com.jacey.game.chat
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
-import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
-import com.jacey.game.common.proto3.LocalServer
 import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
-import com.jacey.game.common.framework.process.Dispatcher
-import com.jacey.game.common.msg.IMessage
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
 
 /**
  * 聊天服状态（原 chat OnlineClientManager）
@@ -58,8 +49,6 @@ object ChatRooms {
  * 消息推送（原 chat MessageRouter 推送部分）
  */
 object ChatMessageRouter {
-    @Volatile
-    var isConnectedToGm: Boolean = false
 
     /** 推送消息到 userId 对应客户端 */
     suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage): Boolean {
@@ -76,48 +65,20 @@ object ChatMessageRouter {
             false
         }
     }
-
-    suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
-        ref?.tell(msg, sender)
-    }
 }
 
 /**
  * 聊天服主 Actor（原 ChatServerActor）
  */
 class ChatServerActor : BaseMessageActor() {
-    private var reconnectJob: Job? = null
 
     init {
-        registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
         registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
         registerHandler(NetMessage::class.java) { msg, sender -> dispatchNetMessage(msg, sender) }
     }
 
-    override suspend fun onTerminated(terminated: akka.actor.Terminated) {
-        ChatMessageRouter.isConnectedToGm = false
-        startReconnect()
-    }
-
-    private suspend fun onLocal(msg: LocalMessage) {
-        when (msg.msgId) {
-            LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE -> registerToGm()
-        }
-    }
-
     private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
         when (msg.msgId) {
-            RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
-                if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
-                    ChatMessageRouter.isConnectedToGm = true
-                    logger.info { "【向GM服务器注册成功....】" }
-                    stopReconnect()
-                } else {
-                    logger.error { "【GM服务器注册失败】errorCode=${msg.errorCode}" }
-                    com.jacey.game.common.framework.process.Exit.exit(0)
-                }
-            }
 
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>()
@@ -176,42 +137,5 @@ class ChatServerActor : BaseMessageActor() {
         }
     }
 
-    private suspend fun registerToGm() {
-        logger.info { "【正在尝试连接GM服务器....】" }
-        val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
-            .setServerType(com.jacey.game.common.proto3.CommonEnum.RemoteServerTypeEnum.ServerTypeChat)
-            .setServerId(NacosService.selfNodeId)
-            .setAkkaPath(NacosService.selfNodeInfo.actorPath)
-        val request = RemoteServer.RegistServerRequest.newBuilder()
-            .setServerInfo(serverInfo)
-        ChatMessageRouter.sendRemoteToGm(
-            RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, request),
-            self()
-        )
-    }
 
-    private fun startReconnect() {
-        if (reconnectJob == null) {
-            val scope = CoroutineScope(Dispatcher.Scheduler)
-            val msg: IMessage =
-                LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
-            reconnectJob = scope.launch {
-                while (isActive) {
-                    self().tell(msg, ActorRef.noSender())
-                    kotlinx.coroutines.delay(5000)
-                }
-            }
-        }
-    }
-
-    private fun stopReconnect() {
-        reconnectJob?.cancel()
-        reconnectJob = null
-    }
-
-    override fun preStart() {
-        super.preStart()
-        startReconnect()
-    }
 }
-

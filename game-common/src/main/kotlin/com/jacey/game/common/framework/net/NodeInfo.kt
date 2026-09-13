@@ -23,6 +23,10 @@ data class NodeInfo(
     val publicWs: Int,
     /** 对外 HTTP 端口（gm 用，0 表示无） */
     val publicHttp: Int,
+    /** 客户端连接地址 ip:port（gateway 用，空表示无；供 GM /gateway 下发） */
+    val connectPath: String = "",
+    /** 是否主逻辑服（logic 用；网关按此标记路由 Regist/Match 到主 logic） */
+    val isMainLogicServer: Boolean = false,
 ) {
     /** 完整 actor path：akka://<sys>@<host>:<port>/user/<actor> */
     val actorPath: String
@@ -36,6 +40,8 @@ data class NodeInfo(
         const val KEY_PUBLIC_TCP = "publicTcp"
         const val KEY_PUBLIC_WS = "publicWs"
         const val KEY_PUBLIC_HTTP = "publicHttp"
+        const val KEY_CONNECT_PATH = "connectPath"
+        const val KEY_IS_MAIN_LOGIC = "isMainLogicServer"
 
         /** 从 Nacos Instance 反序列化 */
         fun fromNacos(kind: NodeKind, ins: com.alibaba.nacos.api.naming.pojo.Instance): NodeInfo {
@@ -50,6 +56,8 @@ data class NodeInfo(
                 publicTcp = meta[KEY_PUBLIC_TCP]?.toIntOrNull() ?: 0,
                 publicWs = meta[KEY_PUBLIC_WS]?.toIntOrNull() ?: 0,
                 publicHttp = meta[KEY_PUBLIC_HTTP]?.toIntOrNull() ?: 0,
+                connectPath = meta[KEY_CONNECT_PATH] ?: "",
+                isMainLogicServer = meta[KEY_IS_MAIN_LOGIC]?.toBoolean() ?: false,
             )
         }
     }
@@ -71,6 +79,8 @@ data class NodeInfo(
         if (publicTcp > 0) ins.metadata[KEY_PUBLIC_TCP] = publicTcp.toString()
         if (publicWs > 0) ins.metadata[KEY_PUBLIC_WS] = publicWs.toString()
         if (publicHttp > 0) ins.metadata[KEY_PUBLIC_HTTP] = publicHttp.toString()
+        if (connectPath.isNotEmpty()) ins.metadata[KEY_CONNECT_PATH] = connectPath
+        if (isMainLogicServer) ins.metadata[KEY_IS_MAIN_LOGIC] = "true"
         return ins
     }
 }

@@ -19,23 +19,15 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 object MessageRouterService {
     private val logger = KotlinLogging.logger {}
 
-    /** 是否已连接 GM（注册成功标记，由 GatewayActor 维护） */
-    @Volatile
-    var isConnectedToGm: Boolean = false
-
+    /** 是否可服务客户端：logic 在线且主 logic 已就绪（均来自 Nacos 目录） */
     fun isAvailableForClient(): Boolean {
-        return isConnectedToGm
-                && NacosService.getNodeInfoListByNodeKind(NodeKind.logic).any { true }
-                && mainLogicServerId() > 0
+        return mainLogicServerId() > 0
     }
 
-    /** 主 logic 服务器 id：优先取注册时声明 isMainLogicServer 的节点（metadata 标记） */
+    /** 主 logic 服务器 id：取 Nacos metadata 标记 isMainLogicServer 的节点 */
     fun mainLogicServerId(): Int {
-        val nodes = NacosService.getNodeInfoListByNodeKind(NodeKind.logic)
-        return nodes
-            .firstOrNull {
-                it.nodeId > 0
-            }?.nodeId ?: 0
+        return NacosService.getNodeInfoListByNodeKind(NodeKind.logic)
+            .firstOrNull { it.isMainLogicServer }?.nodeId ?: 0
     }
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
@@ -108,14 +100,6 @@ object MessageRouterService {
         channel.close()
     }
 
-    suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
-        if (ref != null) {
-            ref.tell(msg, sender)
-        } else {
-            logger.error { "gm actor not found" }
-        }
-    }
 
     suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
         val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
