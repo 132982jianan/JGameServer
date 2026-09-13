@@ -1,11 +1,6 @@
 package com.jacey.game.gateway.network
 
-import akka.actor.ActorRef
-import akka.actor.Props
-import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.msg.NetMessage
-import com.jacey.game.gateway.actor.ClientSessionActor
-import com.jacey.game.gateway.session.Session
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
@@ -16,7 +11,7 @@ import io.netty.handler.codec.http.websocketx.PongWebSocketFrame
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
 
 /** WebSocket 帧适配处理 */
-class WebSocketBusinessHandler : BusinessHandler() {
+class WebSocketBusinessHandler : AbsBusinessHandler() {
     private val logger = KotlinLogging.logger {}
 
     override fun channelActive(ctx: ChannelHandlerContext) {
@@ -51,6 +46,10 @@ class WebSocketBusinessHandler : BusinessHandler() {
         }
     }
 
+    override fun getClientSessionActorPrefix(): String {
+        return "ws-"
+    }
+
     private fun decodeFull(buf: ByteBuf): NetMessage? {
         if (buf.readableBytes() < NettyServer.HEADER_LENGTH) return null
         val totalLength = buf.readInt()
@@ -60,10 +59,4 @@ class WebSocketBusinessHandler : BusinessHandler() {
         buf.readBytes(bytes)
         return NetMessage(rpcNum, bytes).also { it.errorCode = errorCode }
     }
-
-    override fun actorOf(session: Session): ActorRef =
-        AkkaService.system.actorOf(
-            Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
-            "ws-" + session.channel.id().asShortText()
-        )
 }

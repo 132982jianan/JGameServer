@@ -18,10 +18,10 @@ import java.util.concurrent.ConcurrentHashMap
  * - sessionId -> channel（兼容原 OnlineClientManager 索引）
  */
 object SessionManagerService {
-    private val channelIdToSession = ConcurrentHashMap<Int, Session>()
+    private val channelIdToSession = ConcurrentHashMap<Int, ClientSession>()
     private val sessionIdToChannel = ConcurrentHashMap<Int, Channel>()
 
-    val NETTY_CHANNEL_TO_SESSION = AttributeKey.valueOf<Session>("nettyChannelToSessionKey")
+    val NETTY_CHANNEL_TO_SESSION = AttributeKey.valueOf<ClientSession>("nettyChannelToSessionKey")
     val NETTY_CHANNEL_TO_SESSION_ID = AttributeKey.valueOf<Int>("nettyChannelToSessionIdKey")
 
     val onlineCount: Int
@@ -29,8 +29,8 @@ object SessionManagerService {
             return sessionIdToChannel.size
         }
 
-    fun attach(channel: Channel, sessionId: Int): Session {
-        val session = Session(channel)
+    fun attach(channel: Channel, sessionId: Int): ClientSession {
+        val session = ClientSession(channel)
         channel.attr(NETTY_CHANNEL_TO_SESSION).set(session)
         channel.attr(NETTY_CHANNEL_TO_SESSION_ID).setIfAbsent(sessionId)
         channelIdToSession[channel.id().hashCode()] = session
@@ -38,7 +38,7 @@ object SessionManagerService {
         return session
     }
 
-    fun sessionOf(channel: Channel): Session? {
+    fun sessionOf(channel: Channel): ClientSession? {
         return channel.attr(NETTY_CHANNEL_TO_SESSION).get()
     }
 
@@ -50,7 +50,7 @@ object SessionManagerService {
         return sessionIdToChannel[sessionId]
     }
 
-    fun remove(channel: Channel): Session? {
+    fun remove(channel: Channel): ClientSession? {
         sessionIdToChannel.remove(sessionIdOf(channel) ?: 0)
         return channelIdToSession.remove(channel.id().hashCode())
     }

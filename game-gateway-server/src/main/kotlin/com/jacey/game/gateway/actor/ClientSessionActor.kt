@@ -7,7 +7,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.gateway.service.MessageRouterService
-import com.jacey.game.gateway.session.Session
+import com.jacey.game.gateway.session.ClientSession
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -23,7 +23,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
  * 进入 GatewayResponseActor 直接写回客户端——绝不能再进入本 actor
  * （否则响应会被当作新客户端请求再次转发，形成 gateway↔backend 死循环）。
  */
-class ClientSessionActor(private val session: Session) : BaseMessageActor() {
+class ClientSessionActor(private val clientSession: ClientSession) : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
 
     /** 本会话的响应通道：backend 回包/推送的唯一入口 */
@@ -36,54 +36,54 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
     override fun preStart() {
         super.preStart()
         responseActor = context().actorOf(
-            Props.create(GatewayResponseActor::class.java) { GatewayResponseActor(session) },
+            Props.create(GatewayResponseActor::class.java) { GatewayResponseActor(clientSession) },
             "response"
         )
     }
 
     private suspend fun onNetMessage(msg: NetMessage) {
-        log.info { "【客户端消息】sessionId=${session.sessionId} rpcNum=${msg.msgId} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
-        msg.userId = session.userId
-        msg.sessionId = session.sessionId
+        log.info { "【客户端消息】sessionId=${clientSession.sessionId} rpcNum=${msg.msgId} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
+        msg.userId = clientSession.userId
+        msg.sessionId = clientSession.sessionId
 
         when (msg.msgId) {
             Rpc.RpcNameEnum.Regist_VALUE -> {
-                if (session.userId > 0) {
-                    log.error { "【注册异常】已登录用户不能重复注册 userId=${session.userId}" }
+                if (clientSession.userId > 0) {
+                    log.error { "【注册异常】已登录用户不能重复注册 userId=${clientSession.userId}" }
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
                     return
                 }
-                msg.userIp = session.userIp
+                msg.userIp = clientSession.userIp
                 if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
             Rpc.RpcNameEnum.Login_VALUE -> {
-                if (session.userId > 0) {
-                    log.error { "【登录异常】已登录用户不能重复登录 userId=${session.userId}" }
+                if (clientSession.userId > 0) {
+                    log.error { "【登录异常】已登录用户不能重复登录 userId=${clientSession.userId}" }
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
                     return
                 }
-                msg.userIp = session.userIp
+                msg.userIp = clientSession.userIp
                 if (!MessageRouterService.forwardToLogic(msg, responseActor)) {
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
             Rpc.RpcNameEnum.Match_VALUE, Rpc.RpcNameEnum.CancelMatch_VALUE -> {
-                if (session.userId > 0) {
+                if (clientSession.userId > 0) {
                     if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
                         replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                     }
                 } else {
-                    session.close()
+                    clientSession.close()
                 }
             }
             Rpc.RpcNameEnum.GetBattleInfo_VALUE,
             Rpc.RpcNameEnum.Concede_VALUE,
             Rpc.RpcNameEnum.PlacePieces_VALUE,
             Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> {
-                if (session.userId > 0) {
-                    val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
+                if (clientSession.userId > 0) {
+                    val battleId = BattleInfoService.getBattleUserIdToBattleId(clientSession.userId)
                     if (battleId != null) {
                         if (!MessageRouterService.forwardToBattle(msg, responseActor)) {
                             replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
@@ -92,12 +92,12 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                         replyError(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
                     }
                 } else {
-                    session.close()
+                    clientSession.close()
                 }
             }
             Rpc.RpcNameEnum.BattleChatText_VALUE, Rpc.RpcNameEnum.JoinChatRoom_VALUE -> {
-                if (session.userId > 0) {
-                    val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
+                if (clientSession.userId > 0) {
+                    val battleId = BattleInfoService.getBattleUserIdToBattleId(clientSession.userId)
                     if (battleId != null) {
                         if (!MessageRouterService.forwardToChat(msg, responseActor)) {
                             replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
@@ -115,29 +115,7 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
 
     /** 错误响应直达客户端：写 netty channel，不做任何 actor 间转发（杜绝回环） */
     private fun replyError(msg: NetMessage, errorCode: Int) {
-        session.write(NetMessage(msg.msgId, errorCode))
+        clientSession.write(NetMessage(msg.msgId, errorCode))
     }
 }
 
-/**
- * 会话响应 Actor（原 ResponseActor）
- *
- * backend（logic/battle/chat）的回包与推送以本 actor 为 sender，
- * 收到的任何 NetMessage 都只是"要写给客户端的响应"，直接落 channel：
- * - 与 ClientSessionActor（请求通道）物理分离，响应不会被再次路由
- * - 登录成功响应在此绑定 session.userId
- */
-class GatewayResponseActor(private val session: Session) : BaseMessageActor() {
-    private val log = KotlinLogging.logger {}
-
-    init {
-        registerHandler(NetMessage::class.java) { msg, _ ->
-            if (msg.msgId == Rpc.RpcNameEnum.Login_VALUE &&
-                msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE
-            ) {
-                session.userId = msg.userId
-            }
-            session.write(msg)
-        }
-    }
-}

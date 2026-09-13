@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
 import io.netty.handler.timeout.IdleStateHandler
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.launch
-import com.jacey.game.gateway.session.Session
+import com.jacey.game.gateway.session.ClientSession
 import io.netty.util.AttributeKey
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
@@ -77,11 +77,7 @@ object NettyServer {
                             conf.socketAllIdleTime
                         )
                     )
-                    p.addLast(object : BusinessHandler() {
-                        override fun channelActive(ctx: ChannelHandlerContext) {
-                            this@NettyServer.onChannelActive(ctx)
-                        }
-                    })
+                    p.addLast(TcpBusinessHandler())
                 }
             })
         bootstrap.bind(port).sync()
@@ -122,7 +118,7 @@ object NettyServer {
                 val push = com.jacey.game.common.proto3.CommonMsg.ForceOfflinePush.newBuilder()
                     .setForceOfflineReason(CommonEnum.ForceOfflineReasonEnum.ForceOfflineServerNotAvailable)
                     .build()
-                val session = Session(channel)
+                val session = ClientSession(channel)
                 session.write(NetMessage(20001, push))
                 channel.close()
                 return@launch

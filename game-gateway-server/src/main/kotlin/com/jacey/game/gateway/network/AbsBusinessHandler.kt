@@ -6,7 +6,7 @@ import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.gateway.actor.ClientSessionActor
-import com.jacey.game.gateway.session.Session
+import com.jacey.game.gateway.session.ClientSession
 import com.jacey.game.gateway.session.SessionManagerService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.channel.ChannelHandlerContext
@@ -17,8 +17,21 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /** 公共业务入站处理：NetMessage → ClientSessionActor */
-open class BusinessHandler : ChannelInboundHandlerAdapter() {
+abstract class AbsBusinessHandler : ChannelInboundHandlerAdapter() {
     private val logger = KotlinLogging.logger {}
+
+    override fun channelInactive(ctx: ChannelHandlerContext) {
+        val channel = ctx.channel()
+        val session = SessionManagerService.remove(channel)
+        val sessionId = SessionManagerService.sessionIdOf(channel)
+        if (session != null && sessionId != null) {
+            // 断线处理含挂起 Redis/远端通知，异步调度，不阻塞 netty event loop
+            CoroutineScope(Dispatcher.Actor).launch {
+                SessionManagerService.removeSession(sessionId)
+            }
+        }
+        ctx.fireChannelInactive()
+    }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         when (msg) {
@@ -28,13 +41,16 @@ open class BusinessHandler : ChannelInboundHandlerAdapter() {
                     logger.warn { "no session bound, drop msg rpcNum=${msg.msgId}" }
                     return
                 }
+
                 // 每个连接只创建一次 session actor（channel attribute 缓存）
-                var actor = ctx.channel().attr(NettyServer.SESSION_ACTOR_KEY).get()
-                if (actor == null) {
-                    actor = actorOf(session)
-                    ctx.channel().attr(NettyServer.SESSION_ACTOR_KEY).set(actor)
+                var clientSessionActorRef = ctx.channel().attr(NettyServer.SESSION_ACTOR_KEY).get()
+                if (clientSessionActorRef == null) {
+                    clientSessionActorRef = newClientSessionActor(session)
+                    ctx.channel().attr(NettyServer.SESSION_ACTOR_KEY).set(clientSessionActorRef)
                 }
-                actor.tell(msg, null)
+
+                // 发给客户端Actor
+                clientSessionActorRef.tell(msg, null)
             }
 
             else -> ctx.fireChannelRead(msg)
@@ -50,22 +66,14 @@ open class BusinessHandler : ChannelInboundHandlerAdapter() {
         }
     }
 
-    override fun channelInactive(ctx: ChannelHandlerContext) {
-        val channel = ctx.channel()
-        val session = SessionManagerService.remove(channel)
-        val sessionId = SessionManagerService.sessionIdOf(channel)
-        if (session != null && sessionId != null) {
-            // 断线处理含挂起 Redis/远端通知，异步调度，不阻塞 netty event loop
-            CoroutineScope(Dispatcher.Actor).launch {
-                SessionManagerService.removeSession(sessionId)
-            }
-        }
-        ctx.fireChannelInactive()
-    }
 
-    protected open fun actorOf(session: Session): ActorRef =
+
+
+    private fun newClientSessionActor(session: ClientSession): ActorRef =
         AkkaService.system.actorOf(
             Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
-            "client-" + session.channel.id().asShortText()
+            getClientSessionActorPrefix() + session.channel.id().asShortText()
         )
+
+    abstract fun getClientSessionActorPrefix(): String
 }

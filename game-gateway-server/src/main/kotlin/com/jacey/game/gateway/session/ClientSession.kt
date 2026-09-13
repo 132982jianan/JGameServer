@@ -14,7 +14,7 @@ import java.net.InetSocketAddress
  *
  * Session 由 SessionManager（actor 串行）创建与索引。
  */
-class Session(val channel: Channel) {
+class ClientSession(val channel: Channel) {
     var userId: Int = 0
     val userIp: String? = (channel.remoteAddress() as? InetSocketAddress)?.address?.hostAddress
 
