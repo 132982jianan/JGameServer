@@ -7,6 +7,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.BaseBattle
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
+import com.jacey.game.db.service.PlayUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -39,7 +40,7 @@ class BattleActionActor : BaseMessageActor() {
             ?: throw RpcErrorException(Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
         val battleInfoBuilder = BaseBattle.BattleInfo.newBuilder()
         for (oneUserId in BattleInfoService.getOneBattleUserIds(battleId)) {
-            val brief = com.jacey.game.db.service.PlayUserService.getUserBriefInfoByUserId(oneUserId)
+            val brief = PlayUserService.getUserBriefInfoByUserId(oneUserId)
             if (brief != null) battleInfoBuilder.addUserBriefInfos(brief)
         }
         battleInfoBuilder.battleStartTimestamp = BattleInfoService.getOneBattleStartTimestamp(battleId)

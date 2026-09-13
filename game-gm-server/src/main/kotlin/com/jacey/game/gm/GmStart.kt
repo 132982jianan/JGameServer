@@ -28,22 +28,29 @@ object GmStart {
 
     suspend fun startBusiness(): Boolean {
         NacosService.subscribeByNodeKind(NodeKind.gateway)
-        seedAdmin()
+
+        ensureAdmin()
+
         startHttp(AppConfig.instance)
         return true
     }
 
     /** 原 GmUserSeedConfig：admin 账号种子 */
-    private suspend fun seedAdmin() {
+    private suspend fun ensureAdmin() {
         if (!GmUserService.existsAdmin()) {
-            GmUserService.saveAdmin()
+            GmUserService.saveAdminGmUserEntity()
             logger.info { "GmUser seed: created default admin account (userId=1)" }
         }
     }
 
     private fun startHttp(conf: AppConfig) {
         val ports = NacosService.netConfig.portOf(NodeKind.gm, NacosService.selfNodeId)
-        val httpPort = if (ports.http > 0) ports.http else 80
+        val httpPort = if (ports.http > 0) {
+            ports.http
+        } else {
+            80
+        }
+
         Http.start(httpPort, "") {
             get("/gm/gmUserLogin") {
                 val gmUserName = call.request.queryParameters["gmUserName"]
@@ -70,13 +77,16 @@ object GmStart {
                 )
                 call.respondJson(ResultVO(0, "成功"))
             }
+
             // 原 GmController.executeGmCmd（原版 TODO，保持）
             get("/gm/executeGmCmd") {
                 call.respondJson(ResultVO(0, "成功"))
             }
+
             // 原 ClientController.getLeisureGateway：下发空闲网关连接地址
             get("/gateway") {
-                val connectPath = GmRegistry.getLeisureGatewayConnectPath()
+                //从nacos查询网关地址
+                val connectPath = GmService.getGatewayConnectPathFromNacos()
                 if (connectPath != null) {
                     call.respondText(connectPath, io.ktor.http.ContentType.Text.Plain)
                 } else {

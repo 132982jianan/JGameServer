@@ -15,6 +15,7 @@ import com.jacey.game.common.util.DateTimeUtil
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.akka.RemoteCall
 import com.jacey.game.db.entity.BattleRecordEntity
+import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.service.BattleRecordService
 import com.jacey.game.db.service.PlayStateService
@@ -113,7 +114,7 @@ object BattleRooms {
 
     /** 推送消息给某个用户（经 gateway ResponseActor 转发） */
     suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage) {
-        val sessionId = com.jacey.game.db.redis.SessionIdRedis.getOneUserIdToSessionId(userId)
+        val sessionId = SessionIdRedis.getOneUserIdToSessionId(userId)
         if (sessionId != null) {
             getGatewayResponseActor(sessionId)?.tell(netMsg, ActorRef.noSender())
         }

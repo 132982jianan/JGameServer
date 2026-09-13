@@ -8,6 +8,7 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.proto3.Rpc
+import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
 
 /**
@@ -52,7 +53,7 @@ object ChatMessageRouter {
 
     /** 推送消息到 userId 对应客户端 */
     suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage): Boolean {
-        val sessionId = com.jacey.game.db.redis.SessionIdRedis.getOneUserIdToSessionId(userId)
+        val sessionId = SessionIdRedis.getOneUserIdToSessionId(userId)
         return if (sessionId != null) {
             val actor = ChatRooms.getGatewayResponseActor(sessionId)
             if (actor != null) {
