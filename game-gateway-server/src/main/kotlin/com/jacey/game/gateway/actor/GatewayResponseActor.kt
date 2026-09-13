@@ -19,12 +19,20 @@ class GatewayResponseActor(private val session: ClientSession) : BaseMessageActo
 
     init {
         registerHandler(NetMessage::class.java) { msg, _ ->
-            if (msg.msgId == Rpc.RpcNameEnum.Login_VALUE
-                && msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE
-            ) {
-                session.userId = msg.userId
-            }
-            session.write(msg)
+            onNetMessage(msg)
         }
+    }
+
+    /** 写响应给客户端；登录成功响应在此绑定 session.userId */
+    private suspend fun onNetMessage(msg: NetMessage) {
+        // 如果是登录消息
+        if (msg.msgId == Rpc.RpcNameEnum.Login_VALUE
+            && msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE
+        ) {
+            session.userId = msg.userId
+        }
+
+        // 无论如何，都会写出去
+        session.write(msg)
     }
 }
