@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NacosService
+import com.jacey.game.common.framework.akka.ClusterService
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.db.redis.SessionIdRedis
@@ -34,35 +34,26 @@ object MessageRouterService {
         } else false
     }
 
-    /** 通知 battle 服务器创建新战场（找最空闲的 battle 服务器） */
+    /** 通知 battle 服务器创建新战场（随机负载均衡；askAwait 拿到创建结果再返回） */
     suspend fun noticeBattleServerCreateNewBattle(
         battleType: CommonEnum.BattleTypeEnum,
         battleId: String,
         userIds: List<Int>,
-        sender: ActorRef?
     ): Boolean {
-        val ref = NacosService.getRandomActorRefByNodeKind(NodeKind.battle)
-        if (ref != null) {
-            val battleRoomInfo = RemoteServer.BattleRoomInfo.newBuilder()
-                .setBattleType(battleType)
-                .setBattleId(battleId)
-                .addAllUserIds(userIds)
-            val builder = RemoteServer.NoticeBattleServerCreateNewBattleRequest.newBuilder()
-                .setBattleRoomInfo(battleRoomInfo)
-            val remoteMsg = RemoteMessage(
-                RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE,
-                builder
-            )
-            ref.tell(remoteMsg, sender)
-            return true
+        val battleRoomInfo = RemoteServer.BattleRoomInfo.newBuilder()
+            .setBattleType(battleType)
+            .setBattleId(battleId)
+            .addAllUserIds(userIds)
+        val request = RemoteServer.NoticeBattleServerCreateNewBattleRequest.newBuilder()
+            .setBattleRoomInfo(battleRoomInfo)
+        val reply = ClusterService.askRandomAwait(
+            NodeKind.battle,
+            RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE, request)
+        )
+        if (reply == null || reply.errorCode != RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
+            logger.error { "【创建战场失败】battleId=$battleId errorCode=${reply?.errorCode}" }
+            return false
         }
-        logger.error { "【创建战场失败】无可用 battle 服务器" }
-        return false
-    }
-
-    suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
-        ref.tell(msg, null)
         return true
     }
 }

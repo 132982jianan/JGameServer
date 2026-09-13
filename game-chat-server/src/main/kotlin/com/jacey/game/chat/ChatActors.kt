@@ -107,8 +107,16 @@ class ChatServerActor : BaseMessageActor() {
                         )
                         logger.info { "对战聊天室初始化完成 battleId=$battleId" }
                     }
-
-                    else -> logger.error { "not support chatRoomType=${chatRoomInfo.chatRoomType}" }
+                    else -> {
+                        logger.error { "not support chatRoomType=${chatRoomInfo.chatRoomType}" }
+                        sender?.tell(
+                            RemoteMessage(
+                                RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
+                                RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcServerError_VALUE
+                            ),
+                            ActorRef.noSender()
+                        )
+                    }
                 }
             }
         }

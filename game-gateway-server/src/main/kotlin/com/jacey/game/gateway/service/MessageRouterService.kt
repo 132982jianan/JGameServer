@@ -4,7 +4,6 @@ import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.msg.NetMessage
-import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.db.service.BattleInfoService
@@ -98,30 +97,5 @@ object MessageRouterService {
         val session = SessionManagerService.sessionOf(channel)
         session?.write(NetMessage(20001, push))
         channel.close()
-    }
-
-
-    suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
-        ref.tell(msg, null)
-        return true
-    }
-
-    suspend fun sendRemoteToLogic(msg: RemoteMessage, logicServerId: Int): Boolean {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.logic, logicServerId) ?: return false
-        ref.tell(msg, null)
-        return true
-    }
-
-    suspend fun sendRemoteToBattle(msg: RemoteMessage, battleServerId: Int): Boolean {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.battle, battleServerId) ?: return false
-        ref.tell(msg, null)
-        return true
-    }
-
-    suspend fun sendRemoteToChat(msg: RemoteMessage, chatServerId: Int): Boolean {
-        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.chat, chatServerId) ?: return false
-        ref.tell(msg, null)
-        return true
     }
 }

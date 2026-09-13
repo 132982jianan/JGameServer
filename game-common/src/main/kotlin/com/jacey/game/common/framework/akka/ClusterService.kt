@@ -1,5 +1,6 @@
 package com.jacey.game.common.framework.akka
 
+import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.msg.RemoteMessage
@@ -16,7 +17,7 @@ import kotlin.time.Duration.Companion.seconds
  * 寻址唯一路径：NacosService.getActorRefByNodeKindAndNodeId（Nacos 目录 + ActorRef 缓存）。
  * 返回 false / null 表示目标节点不在线。
  */
-object RemoteCall {
+object ClusterService {
     private val logger = KotlinLogging.logger {}
 
     /** 单向发送（fire-and-forget）。返回 false = 节点不在线（已记日志） */
@@ -25,7 +26,7 @@ object RemoteCall {
             logger.error { "【RPC失败】节点不在线 kind=$kind nodeId=$nodeId rpcNum=${msg.msgId}" }
             return false
         }
-        ref.tell(msg, akka.actor.ActorRef.noSender())
+        ref.tell(msg, ActorRef.noSender())
         return true
     }
 

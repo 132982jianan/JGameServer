@@ -95,7 +95,7 @@ object MatchService {
 
     private suspend fun doAfterMatchSuccess(battleType: CommonEnum.BattleTypeEnum, userIds: List<Int>) {
         val battleId = generateBattleId(battleType)
-        val isSuccess = MessageRouterService.noticeBattleServerCreateNewBattle(battleType, battleId, userIds, ActorRefManagerService.matchActor)
+        val isSuccess = MessageRouterService.noticeBattleServerCreateNewBattle(battleType, battleId, userIds)
         if (isSuccess) {
             for (userId in userIds) {
                 PlayStateService.changeUserActionState(

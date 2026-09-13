@@ -13,7 +13,8 @@ import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.util.DateTimeUtil
 import com.jacey.game.common.framework.akka.AkkaService
-import com.jacey.game.common.framework.akka.RemoteCall
+import com.jacey.game.common.framework.akka.ClusterService
+import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.db.entity.BattleRecordEntity
 import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
@@ -47,7 +48,7 @@ object BattleRooms {
 
     fun getGatewayResponseActor(sessionId: Int): ActorRef? = sessionIdToGatewayResponseActor[sessionId]
 
-    /** 创建战场（原 BattleRoomManagerActor.noticeBattleServerCreateNewBattle） */
+    /** 创建战场（原 BattleRoomManagerActor.noticeBattleServerCreateNewBattle）；失败也回包（askAwait 调用方依赖回复判定） */
     suspend fun createNewBattle(request: RemoteServer.NoticeBattleServerCreateNewBattleRequest, sender: ActorRef?) {
         val battleRoomInfo = request.battleRoomInfo
         val battleType = battleRoomInfo.battleType
@@ -79,7 +80,16 @@ object BattleRooms {
                     ActorRef.noSender()
                 )
             }
-            else -> logger.error { "createNewBattle: not support battleType=$battleType" }
+            else -> {
+                logger.error { "createNewBattle: not support battleType=$battleType" }
+                sender?.tell(
+                    RemoteMessage(
+                        RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE,
+                        RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcServerError_VALUE
+                    ),
+                    ActorRef.noSender()
+                )
+            }
         }
     }
 
@@ -152,8 +162,8 @@ class BaseBattleActor : BaseMessageActor() {
             .setBattleId(battleId)
         val request = RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest.newBuilder()
             .setChatRoomInfo(chatRoomInfo)
-        val reply = RemoteCall.askRandomAwait(
-            com.jacey.game.common.framework.net.NodeKind.chat,
+        val reply = ClusterService.askRandomAwait(
+            NodeKind.chat,
             RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE, request)
         )
         if (reply == null ||

@@ -14,9 +14,10 @@ import com.jacey.game.common.util.StringUtil
 import com.jacey.game.db.service.PlayUserService
 import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
+import com.jacey.game.common.framework.akka.ClusterService
+import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.db.service.PlayStateService
-import com.jacey.game.logic.service.MessageRouterService
 import com.jacey.game.logic.service.OnlineClientService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -79,7 +80,7 @@ class LoginActor : BaseMessageActor() {
                     RemoteServer.RemoteRpcNameEnum.RemoteRpcLogicServerNoticeGatewayForceOfflineClient_VALUE,
                     pushBuilder
                 )
-                if (!MessageRouterService.sendRemoteToGateway(remoteMessage, gatewayId)) {
+                if (!ClusterService.tell(NodeKind.gateway, gatewayId, remoteMessage)) {
                     log.error { "【消息推送异常】无法推送到 gateway, userId=$userId, gatewayId=$gatewayId" }
                 }
             }
