@@ -1,8 +1,8 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.service
 
 import com.jacey.game.common.proto3.CommonEnum
-import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.db.service.PlayStateService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
@@ -95,7 +95,7 @@ object MatchService {
 
     private suspend fun doAfterMatchSuccess(battleType: CommonEnum.BattleTypeEnum, userIds: List<Int>) {
         val battleId = generateBattleId(battleType)
-        val isSuccess = MessageRouter.noticeBattleServerCreateNewBattle(battleType, battleId, userIds, AkkaRefs.matchActor)
+        val isSuccess = MessageRouterService.noticeBattleServerCreateNewBattle(battleType, battleId, userIds, ActorRefManagerService.matchActor)
         if (isSuccess) {
             for (userId in userIds) {
                 PlayStateService.changeUserActionState(
@@ -111,12 +111,12 @@ object MatchService {
     }
 
     private suspend fun sendMatchFailPush(battleType: CommonEnum.BattleTypeEnum, userIds: List<Int>) {
-        val pushBuilder = com.jacey.game.common.proto3.CommonMsg.MatchResultPush.newBuilder()
+        val pushBuilder = CommonMsg.MatchResultPush.newBuilder()
             .setIsSuccess(false)
             .setBattleType(battleType)
         val netMsg = NetMessage(21001, pushBuilder) // RpcMatchResultPush
         for (userId in userIds) {
-            MessageRouter.sendNetMsgToOneUser(userId, netMsg)
+            MessageRouterService.sendNetMsgToOneUser(userId, netMsg)
         }
     }
 

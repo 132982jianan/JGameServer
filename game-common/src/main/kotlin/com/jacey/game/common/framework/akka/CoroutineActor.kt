@@ -2,6 +2,7 @@ package com.jacey.game.common.framework.akka
 
 import akka.actor.UntypedAbstractActor
 import akka.actor.ActorRef
+import com.jacey.game.common.framework.process.Dispatcher
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -35,19 +36,14 @@ abstract class CoroutineActor(
 
     val logger = KotlinLogging.logger { }
 
-    /** 消息信封：附带发送者引用，供 onMessage 内 reply 使用 */
-    data class Envelope(val msg: Any, val sender: ActorRef?)
-
+    // 包装一层Channel,谁ActorRef发过来的什么消息
     private val channel = Channel<Envelope>(capacity, onBufferOverflow)
+
     private var loopJob: Job? = null
 
     /** actor 启动：拉起消费协程（并发度=1，串行消费 Channel） */
     override fun preStart() {
-        val scope = CoroutineScope(
-            com.jacey.game.common.framework.process.Dispatcher.Actor + CoroutineName(
-                self().path().name()
-            )
-        )
+        val scope = CoroutineScope(Dispatcher.Actor + CoroutineName(self().path().name()))
         loopJob = scope.launch {
             for (envelope in channel) {
                 try {
@@ -62,6 +58,7 @@ abstract class CoroutineActor(
     /** actor 停止：关闭 Channel，等消费协程清算完剩余消息再退出 */
     override fun postStop() {
         channel.close()
+
         // postStop 不能挂起；runBlocking 仅发生在进程关闭路径
         loopJob?.let { runBlocking { it.join() } }
     }
@@ -73,7 +70,6 @@ abstract class CoroutineActor(
             logger.warn { "channel full/closed, drop msg: $message" }
         }
     }
-
 
     /** 子类实现：挂起式消息处理。执行期间本 actor 的后续消息排队等待 */
     abstract suspend fun onMessage(msg: Any, sender: ActorRef?)

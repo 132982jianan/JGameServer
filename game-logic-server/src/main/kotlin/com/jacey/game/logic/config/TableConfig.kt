@@ -1,4 +1,4 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.config
 
 /**
  * 系统参数表（原 SystemConfig.xlsx 固化为代码常量，无需配置文件）

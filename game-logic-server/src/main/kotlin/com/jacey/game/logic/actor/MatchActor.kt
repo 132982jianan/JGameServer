@@ -1,4 +1,4 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.actor
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
@@ -17,6 +17,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.msg.IMessage
+import com.jacey.game.logic.service.MatchService
+import com.jacey.game.logic.service.MessageRouterService
+import kotlinx.coroutines.delay
 
 /**
  * 匹配 Actor（原 MatchActor）
@@ -86,7 +90,7 @@ class MatchActor : BaseMessageActor() {
                 }
                 val netMsg = NetMessage(21001, pushBuilder) // RpcMatchResultPush
                 for (userId in userIds) {
-                    MessageRouter.sendNetMsgToOneUser(userId, netMsg)
+                    MessageRouterService.sendNetMsgToOneUser(userId, netMsg)
                 }
             }
         }
@@ -95,12 +99,12 @@ class MatchActor : BaseMessageActor() {
     override fun preStart() {
         super.preStart()
         // 每秒给自己发一次匹配计算消息
-        val msg: com.jacey.game.common.msg.IMessage =
+        val msg: IMessage =
             LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE)
         matchJob = CoroutineScope(Dispatcher.Scheduler).launch {
             while (isActive) {
                 self().tell(msg, ActorRef.noSender())
-                kotlinx.coroutines.delay(1000)
+                delay(1000)
             }
         }
     }

@@ -1,4 +1,4 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.service
 
 import akka.actor.ActorRef
 import com.jacey.game.common.msg.NetMessage
@@ -7,54 +7,32 @@ import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.redis.SessionIdRedis
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
- * 会话索引（object 单例，原 logic OnlineClientManager）
- * sessionId -> gateway ResponseActor（远端响应直接转发给客户端）
- */
-object OnlineClients {
-    private val sessionIdToGatewayResponseActor =
-        java.util.concurrent.ConcurrentHashMap<Int, ActorRef>()
-
-    val onlineCount: Int get() = sessionIdToGatewayResponseActor.size
-
-    fun addSessionIdToGatewayResponseActor(sessionId: Int, actor: ActorRef?) {
-        if (actor != null) {
-            sessionIdToGatewayResponseActor[sessionId] = actor
-        }
-    }
-
-    fun removeSessionIdToGatewayResponseActor(sessionId: Int) {
-        sessionIdToGatewayResponseActor.remove(sessionId)
-    }
-
-    fun getGatewayResponseActor(sessionId: Int): ActorRef? = sessionIdToGatewayResponseActor[sessionId]
-}
-
-/**
  * 消息路由（object 单例，原 logic MessageManager）
  */
-object MessageRouter {
+object MessageRouterService {
     private val logger = KotlinLogging.logger {}
+
     private var logicServerActorRef: ActorRef? = null
+
+    @Volatile
+    var isConnectedToGm: Boolean = false
 
     /** logic 主 actor（注册响应 watch 用） */
     fun bindSelf(actor: ActorRef) {
         logicServerActorRef = actor
     }
 
-    @Volatile
-    var isConnectedToGm: Boolean = false
-
-    fun isAvailableForUpdateLoadBalance(): Boolean = isConnectedToGm
+    fun isAvailableForUpdateLoadBalance(): Boolean {
+        return isConnectedToGm
+    }
 
     /** 推送 NetMessage 到指定 session 的客户端 */
     fun sendNetMsgToOneSession(sessionId: Int, netMsg: NetMessage): Boolean {
-        val gatewayResponseActor = OnlineClients.getGatewayResponseActor(sessionId)
+        val gatewayResponseActor = OnlineClientService.getGatewayResponseActor(sessionId)
         return if (gatewayResponseActor != null) {
             gatewayResponseActor.tell(netMsg, ActorRef.noSender())
             true

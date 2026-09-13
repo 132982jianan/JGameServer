@@ -1,16 +1,17 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.actor
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.constants.SystemConfigKey
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.util.MD5Util
 import com.jacey.game.common.util.StringUtil
 import com.jacey.game.db.entity.PlayUserEntity
 import com.jacey.game.db.service.PlayUserService
-import com.jacey.game.logic.TableConfig.systemInt
+import com.jacey.game.logic.config.TableConfig.systemInt
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.Date
 
@@ -25,7 +26,7 @@ class RegistActor : BaseMessageActor() {
     }
 
     private suspend fun onRegist(msg: NetMessage, sender: ActorRef?) {
-        val request = msg.getProto<com.jacey.game.common.proto3.CommonMsg.RegistRequest>()
+        val request = msg.getProto<CommonMsg.RegistRequest>()
         if (request == null) {
             sendError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE, sender)
             return
@@ -33,11 +34,18 @@ class RegistActor : BaseMessageActor() {
         log.info { "【req Regist】username=${request.username}" }
         val username: String = request.username
         val password: String = request.password
-        if (!isLegalUsername(username)) throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorUsernameIllegal_VALUE)
-        if (!isLegalPassword(password)) throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorPasswordIllegal_VALUE)
-        if (PlayUserService.hasUsername(username)) throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorUsernameIsExist_VALUE)
+        if (!isLegalUsername(username)) {
+            throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorUsernameIllegal_VALUE)
+        }
+        if (!isLegalPassword(password)) {
+            throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorPasswordIllegal_VALUE)
+        }
+        if (PlayUserService.hasUsername(username)) {
+            throw RpcErrorException(Rpc.RpcErrorCodeEnum.RegisErrorUsernameIsExist_VALUE)
+        }
 
-        val entity = PlayUserEntity(
+        // 新角色
+        val playUserEntity = PlayUserEntity(
             _id = 0,
             username = username,
             nickname = username,
@@ -45,9 +53,9 @@ class RegistActor : BaseMessageActor() {
             registIp = msg.userIp,
             registTimestamp = Date(),
         )
-        PlayUserService.createNewUser(entity)
+        PlayUserService.createNewUser(playUserEntity)
 
-        val builder = com.jacey.game.common.proto3.CommonMsg.RegistResponse.newBuilder()
+        val builder = CommonMsg.RegistResponse.newBuilder()
         sender?.tell(NetMessage(Rpc.RpcNameEnum.Regist_VALUE, builder), ActorRef.noSender())
     }
 
@@ -55,18 +63,26 @@ class RegistActor : BaseMessageActor() {
         sender?.tell(NetMessage(msg.rpcNum, errorCode), ActorRef.noSender())
     }
 
-    // username 长度限制 + 只能数字/字母
+    /*
+    username 长度限制 + 只能数字/字母
+     */
     private fun isLegalUsername(username: String?): Boolean {
         val max = systemInt(SystemConfigKey.USERNAME_MAX_LENGTH) ?: return false
         if (StringUtil.isNullOrEmpty(username) || username!!.length > max) return false
         return username.all { StringUtil.isLetterChar(it) || StringUtil.isDigitChar(it) }
     }
 
-    // password 长度限制 + 只能数字/字母
+    /*
+    password 长度限制 + 只能数字/字母
+     */
     private fun isLegalPassword(password: String?): Boolean {
         val min = systemInt(SystemConfigKey.PASSWORD_MIN_LENGTH) ?: return false
         val max = systemInt(SystemConfigKey.PASSWORD_MAX_LENGTH) ?: return false
-        if (StringUtil.isNullOrEmpty(password) || password!!.length < min || password.length > max) return false
+
+        if (StringUtil.isNullOrEmpty(password) || password!!.length < min || password.length > max) {
+            return false
+        }
+
         return password.all { StringUtil.isLetterChar(it) || StringUtil.isDigitChar(it) }
     }
 }

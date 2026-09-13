@@ -7,15 +7,11 @@ import com.jacey.game.common.msg.IMessage
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
-import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.proto3.Rpc
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlin.coroutines.resume
 
 /**
  * 基础消息处理 Actor（协程化）
@@ -59,6 +55,7 @@ abstract class BaseMessageActor : CoroutineActor() {
                 handler(msg, sender)
             } catch (e: RpcErrorException) {
                 when (msg) {
+                    // 因为现在是采用抛出异常方式，因此这里进行错误处理
                     is NetMessage -> sendErrorToClient(msg, e.errorCode, sender)
                     is RemoteMessage -> sendErrorToRemoteServer(msg, e.errorCode, sender)
                     else -> log.error(e) { "RpcErrorException on local msg rpcNum=${msg.rpcNum}" }
@@ -73,7 +70,7 @@ abstract class BaseMessageActor : CoroutineActor() {
 
     protected fun sendErrorToClient(netMessage: NetMessage, errorCode: Int, sender: ActorRef?) {
         val resp = NetMessage(netMessage.rpcNum, errorCode)
-        sender?.tell(resp, akka.actor.ActorRef.noSender())
+        sender?.tell(resp, ActorRef.noSender())
     }
 
     protected fun sendErrorToRemoteServer(remoteMessage: RemoteMessage, errorCode: Int, sender: ActorRef?) {
@@ -83,7 +80,9 @@ abstract class BaseMessageActor : CoroutineActor() {
 
     companion object {
         /** 构造带类型键的注册辅助（由 Kotlin reified 使用） */
-        inline fun <reified T> typed() = T::class.java
+        inline fun <reified T> typeOf(): Class<T> {
+            return T::class.java
+        }
     }
 }
 

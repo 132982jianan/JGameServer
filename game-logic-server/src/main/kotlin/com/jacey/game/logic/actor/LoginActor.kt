@@ -1,4 +1,4 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.actor
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
@@ -15,6 +15,9 @@ import com.jacey.game.db.service.PlayUserService
 import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.db.service.PlayStateService
+import com.jacey.game.logic.service.MessageRouterService
+import com.jacey.game.logic.service.OnlineClientService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -65,7 +68,7 @@ class LoginActor : BaseMessageActor() {
         // 5. 同一账号二次登录：通知旧 session 所在 gateway 强制下线
         val oldSessionId = SessionIdRedis.getOneUserIdToSessionId(userId)
         if (oldSessionId != null) {
-            val gatewayId = com.jacey.game.db.service.BattleInfoService.getOneSessionIdToGatewayId(oldSessionId)
+            val gatewayId = BattleInfoService.getOneSessionIdToGatewayId(oldSessionId)
             if (gatewayId == null) {
                 log.error { "【登录异常】找不到 old session 对应 gatewayId, userId=$userId, oldSessionId=$oldSessionId" }
             } else {
@@ -76,7 +79,7 @@ class LoginActor : BaseMessageActor() {
                     RemoteServer.RemoteRpcNameEnum.RemoteRpcLogicServerNoticeGatewayForceOfflineClient_VALUE,
                     pushBuilder
                 )
-                if (!MessageRouter.sendRemoteToGateway(remoteMessage, gatewayId)) {
+                if (!MessageRouterService.sendRemoteToGateway(remoteMessage, gatewayId)) {
                     log.error { "【消息推送异常】无法推送到 gateway, userId=$userId, gatewayId=$gatewayId" }
                 }
             }
@@ -86,9 +89,9 @@ class LoginActor : BaseMessageActor() {
         SessionIdRedis.setOneSessionIdToUserId(sessionId, userId)
         BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NodeRegister.selfId)
         // 7. 记录该玩家的 gateway ResponseActor
-        OnlineClients.addSessionIdToGatewayResponseActor(sessionId, sender)
+        OnlineClientService.addSessionIdToGatewayResponseActor(sessionId, sender)
         // 8. 修改玩家在线状态
-        com.jacey.game.db.service.PlayStateService.changeUserOnlineState(userId, true)
+        PlayStateService.changeUserOnlineState(userId, true)
         // 9. 更新登录信息
         userDataBuilder.setLastLoginIp(msg.userIp)
         userDataBuilder.setLastLoginTimestamp(DateTimeUtil.getCurrentTimestamp())

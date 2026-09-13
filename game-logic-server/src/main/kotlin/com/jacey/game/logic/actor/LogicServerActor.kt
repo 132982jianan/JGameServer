@@ -1,23 +1,28 @@
-package com.jacey.game.logic
+package com.jacey.game.logic.actor
 
 import akka.actor.ActorRef
+import akka.actor.Terminated
 import com.jacey.game.common.akka.BaseMessageActor
+import com.jacey.game.common.framework.config.AppConfig
+import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.framework.process.Exit
+import com.jacey.game.common.msg.IMessage
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.LocalServer
-import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
-import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.PlayStateService
-import com.jacey.game.logic.OnlineClients
-import com.jacey.game.logic.MatchService
+import com.jacey.game.logic.service.ActorRefManagerService
+import com.jacey.game.logic.service.MatchService
+import com.jacey.game.logic.service.MessageRouterService
+import com.jacey.game.logic.service.OnlineClientService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -34,17 +39,25 @@ class LogicServerActor : BaseMessageActor() {
         registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
         registerHandler(NetMessage::class.java) { msg, sender ->
             // 顶层分发：按 rpcNum 投递给业务子 actor（原 MessageManager.handleRequest）
-            val target = when (msg.rpcNum) {
-                Rpc.RpcNameEnum.Regist_VALUE -> AkkaRefs.registActor
-                Rpc.RpcNameEnum.Login_VALUE -> AkkaRefs.loginActor
+            val targetActorRef = when (msg.rpcNum) {
+                Rpc.RpcNameEnum.Regist_VALUE -> ActorRefManagerService.registActor
+                Rpc.RpcNameEnum.Login_VALUE -> ActorRefManagerService.loginActor
                 Rpc.RpcNameEnum.Match_VALUE,
                 Rpc.RpcNameEnum.CancelMatch_VALUE,
-                Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> AkkaRefs.matchActor
+                Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> ActorRefManagerService.matchActor
+
                 else -> null
             }
-            if (target != null) {
-                logger.info { "【分发】rpcNum=${msg.rpcNum} -> ${target.path().name()} sender=${sender?.path() ?: "noSender"}" }
-                target.tell(msg, sender)
+
+            if (targetActorRef != null) {
+                logger.info {
+                    "【分发】rpcNum=${msg.rpcNum} -> ${
+                        targetActorRef.path().name()
+                    } sender=${sender?.path() ?: "noSender"}"
+                }
+
+                // 分发过去
+                targetActorRef.tell(msg, sender)
             } else {
                 logger.error { "【分发失败】无业务 actor 处理 rpcNum=${msg.rpcNum}" }
                 sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), self())
@@ -52,8 +65,8 @@ class LogicServerActor : BaseMessageActor() {
         }
     }
 
-    override suspend fun onTerminated(t: akka.actor.Terminated) {
-        MessageRouter.isConnectedToGm = false
+    override suspend fun onTerminated(t: Terminated) {
+        MessageRouterService.isConnectedToGm = false
         logger.warn { "【GM服务器连接已断开...】, 开始重连任务, 执行间隔 = 5s" }
         startReconnect()
     }
@@ -68,22 +81,24 @@ class LogicServerActor : BaseMessageActor() {
         when (msg.rpcNum) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
-                    MessageRouter.isConnectedToGm = true
+                    MessageRouterService.isConnectedToGm = true
                     logger.info { "【向GM服务器注册成功....】" }
                     stopReconnect()
                 } else {
                     logger.error { "【GM服务器注册失败】errorCode=${msg.errorCode}" }
-                    com.jacey.game.common.framework.process.Exit.exit(0)
+                    Exit.exit(0)
                 }
             }
+
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>() ?: return
                 if (push.userId != 0 && push.isUserOffline) {
                     // 只有主逻辑服务器处理匹配取消
-                    if (AppConfig.instance.isMainLogicServer) {
+                    if (AppConfig.Companion.instance.isMainLogicServer) {
                         val state = PlayStateService.getPlayStateByUserId(push.userId)
                         if (state != null &&
-                            state.userActionState == CommonEnum.UserActionStateEnum.Matching_VALUE) {
+                            state.userActionState == CommonEnum.UserActionStateEnum.Matching_VALUE
+                        ) {
                             MatchService.removeMatchPlayer(
                                 push.userId,
                                 CommonEnum.BattleTypeEnum.forNumber(state.battleType)
@@ -91,7 +106,7 @@ class LogicServerActor : BaseMessageActor() {
                         }
                     }
                 }
-                OnlineClients.removeSessionIdToGatewayResponseActor(push.sessionId)
+                OnlineClientService.removeSessionIdToGatewayResponseActor(push.sessionId)
             }
         }
     }
@@ -102,10 +117,10 @@ class LogicServerActor : BaseMessageActor() {
             .setServerType(CommonEnum.RemoteServerTypeEnum.ServerTypeLogic)
             .setServerId(NodeRegister.selfId)
             .setAkkaPath(NodeRegister.selfInfo.actorPath)
-            .setIsMainLogicServer(AppConfig.instance.isMainLogicServer)
+            .setIsMainLogicServer(AppConfig.Companion.instance.isMainLogicServer)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
-        MessageRouter.sendRemoteToGm(
+        MessageRouterService.sendRemoteToGm(
             RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, request),
             self()
         )
@@ -114,12 +129,12 @@ class LogicServerActor : BaseMessageActor() {
     private fun startReconnect() {
         if (reconnectJob == null) {
             val scope = CoroutineScope(Dispatcher.Scheduler)
-            val msg: com.jacey.game.common.msg.IMessage =
+            val msg: IMessage =
                 LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
             reconnectJob = scope.launch {
                 while (isActive) {
                     self().tell(msg, ActorRef.noSender())
-                    kotlinx.coroutines.delay(5000)
+                    delay(5000)
                 }
             }
         }
