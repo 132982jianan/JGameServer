@@ -44,7 +44,7 @@ class RegistActor : BaseMessageActor() {
             _id = 0,
             username = username,
             nickname = username,
-            passwordMD5 = MD5Util.md5(password),
+            passwordMD5 = MD5Util.md5(password).uppercase(),
             registIp = msg.userIp,
             registTimestamp = Date(),
         )
