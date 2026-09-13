@@ -1,6 +1,6 @@
 package com.jacey.game.common.framework.redis
 
-import com.jacey.game.common.framework.nacos.ConfigLoader
+import com.jacey.game.common.framework.nacos.ConfigLoaderService
 import com.jacey.game.common.framework.process.Exit
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.lettuce.core.RedisClient
@@ -33,7 +33,7 @@ object Redis {
     }
 
     fun init(): Boolean {
-        conf = ConfigLoader.load<RedisConfig>() ?: return false
+        conf = ConfigLoaderService.load<RedisConfig>() ?: return false
         val uri = RedisURI.builder()
             .withHost(conf.host)
             .withPort(conf.port)

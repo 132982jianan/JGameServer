@@ -1,13 +1,13 @@
 package com.jacey.game.common.framework.net
 
-import com.jacey.game.common.framework.nacos.Config
+import com.jacey.game.common.framework.nacos.IConfig
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class OffsetStrategy(
     val value: Int? = null,
     val envVar: String? = null,
-) : Config {
+) : IConfig {
     fun resolve(): Int {
         value?.let {
             return it

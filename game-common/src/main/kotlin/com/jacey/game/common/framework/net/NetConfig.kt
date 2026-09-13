@@ -1,6 +1,6 @@
 package com.jacey.game.common.framework.net
 
-import com.jacey.game.common.framework.nacos.Config
+import com.jacey.game.common.framework.nacos.IConfig
 
 import kotlinx.serialization.Serializable
 
@@ -21,7 +21,7 @@ data class NetConfig(
     val portOffset: OffsetStrategy = OffsetStrategy(),
     /** akka 通用配置（Nacos net.yml 中统一管理，多节点共用） */
     val akka: AkkaSettings = AkkaSettings(),
-) : Config {
+) : IConfig {
 
     /** 取某节点端口配置；实际端口 = base + offset + nodeId - 1 */
     fun calNodePortByNodeKindAndNodeId(kind: NodeKind, nodeId: Int): NodePort {

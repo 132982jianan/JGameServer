@@ -1,7 +1,7 @@
 package com.jacey.game.common.framework.config
 
-import com.jacey.game.common.framework.nacos.Config
-import com.jacey.game.common.framework.nacos.ConfigLoader
+import com.jacey.game.common.framework.nacos.IConfig
+import com.jacey.game.common.framework.nacos.ConfigLoaderService
 import kotlinx.serialization.Serializable
 
 /**
@@ -30,11 +30,11 @@ data class AppConfig(
     val gatewayId: Int = 1,
     /** 网关对外连接地址（客户端从 GM 获取） */
     val gatewayConnectPath: String = "127.0.0.1:10001",
-) : Config {
+) : IConfig {
     companion object {
         /** 惰性加载（首次访问时从 Nacos/conf 读取） */
         val instance: AppConfig by lazy {
-            ConfigLoader.load<AppConfig>() ?: AppConfig()
+            ConfigLoaderService.load<AppConfig>() ?: AppConfig()
         }
     }
 }

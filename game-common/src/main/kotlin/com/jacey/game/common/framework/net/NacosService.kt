@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.alibaba.nacos.api.naming.listener.NamingEvent
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.akka.resolveAwait
-import com.jacey.game.common.framework.nacos.ConfigLoader
+import com.jacey.game.common.framework.nacos.ConfigLoaderService
 import com.jacey.game.common.framework.nacos.Nacos
 import com.jacey.game.common.framework.process.Exit
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -47,7 +47,7 @@ object NacosService {
         connectPath: String = "",
         isMainLogicServer: Boolean = false,
     ): Boolean {
-        netConfig = ConfigLoader.load<NetConfig>() ?: return false
+        netConfig = ConfigLoaderService.load<NetConfig>() ?: return false
 
         val ports = netConfig.calNodePortByNodeKindAndNodeId(kind, requestedId ?: 1)
         val host = netConfig.privateIp.resolve()

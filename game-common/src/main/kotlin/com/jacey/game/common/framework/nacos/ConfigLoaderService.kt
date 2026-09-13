@@ -17,12 +17,12 @@ import java.util.concurrent.Executor
  *
  * 配置文件名约定：类名去 Config 后缀小写，如 MongoConfig -> mongo.yml
  */
-object ConfigLoader {
+object ConfigLoaderService {
     val logger = KotlinLogging.logger {}
     const val DEFAULT_TIMEOUT = 3000L
 
     /** 加载并监听配置变更（变更时用新配置回调 block） */
-    inline fun <reified T : Config> listen(crossinline block: (T) -> Unit): T? {
+    inline fun <reified T : IConfig> listen(crossinline block: (T) -> Unit): T? {
         val name = configName<T>()
         try {
             val listener = object : Listener {
@@ -49,7 +49,7 @@ object ConfigLoader {
      * 加载配置：Nacos > 本地 conf/ > classpath conf/
      * Nacos 无此配置且本地有默认值时，自动把默认值发布到 Nacos（默认发布机制）
      */
-    inline fun <reified T : Config> load(): T? {
+    inline fun <reified T : IConfig> load(): T? {
         val name = configName<T>()
         val nacosStr = try {
             logger.debug { "try loading from nacos $name" }
@@ -84,7 +84,7 @@ object ConfigLoader {
     }
 
     /** 仅读取本地配置（conf/ 目录或 classpath），不访问 Nacos。用于 nacos.yml 自身 */
-    inline fun <reified T : Config> loadLocal(): T? {
+    inline fun <reified T : IConfig> loadLocal(): T? {
         val name = configName<T>()
         val str = readLocal(name) ?: return null
         return try {
@@ -96,7 +96,7 @@ object ConfigLoader {
     }
 
     /** MongoConfig -> "mongo" */
-    inline fun <reified T : Config> configName(): String =
+    inline fun <reified T : IConfig> configName(): String =
         T::class.simpleName!!.lowercase().removeSuffix("config")
 
     /** 依次查找 ../conf/、conf/ 目录与 classpath conf/ 下的 yml 文件 */
@@ -114,7 +114,7 @@ object ConfigLoader {
             }
             // 2. classpath（打进 jar 的 resources/conf/ 默认值）
             dirList.forEach { dir ->
-                val url = ConfigLoader::class.java.classLoader.getResource("$dir$filename")
+                val url = ConfigLoaderService::class.java.classLoader.getResource("$dir$filename")
                 if (url != null) {
                     logger.debug { "load $filename from $url" }
                     return url.readText()

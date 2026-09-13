@@ -19,4 +19,4 @@ data class NacosConfig(
     val username: String = "",
     /** 密码 */
     val password: String = "",
-) : Config
+) : IConfig

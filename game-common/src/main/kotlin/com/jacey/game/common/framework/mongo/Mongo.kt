@@ -4,12 +4,11 @@ import com.mongodb.ConnectionString
 import com.mongodb.MongoClientSettings
 import com.mongodb.kotlin.client.coroutine.MongoClient
 import com.mongodb.kotlin.client.coroutine.MongoDatabase
-import com.jacey.game.common.framework.nacos.ConfigLoader
-import com.jacey.game.common.framework.nacos.Config
+import com.jacey.game.common.framework.nacos.ConfigLoaderService
+import com.jacey.game.common.framework.nacos.IConfig
 import com.jacey.game.common.framework.process.Exit
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.serialization.Serializable
-import org.bson.codecs.configuration.CodecRegistries
 import java.util.concurrent.TimeUnit
 
 /**
@@ -33,10 +32,10 @@ object Mongo {
         val connectionString: String = System.getenv("MONGO_URI")?.takeIf { it.isNotBlank() }
             ?: ("mongodb://" + (System.getenv("MONGO_HOST")?.takeIf { it.isNotBlank() } ?: "127.0.0.1") + ":27017"),
         val databaseName: String = System.getenv("MONGO_DB") ?: "jgame_server",
-    ) : Config
+    ) : IConfig
 
     fun init(): Boolean {
-        conf = ConfigLoader.load<MongoConfig>() ?: return false
+        conf = ConfigLoaderService.load<MongoConfig>() ?: return false
         val settings = MongoClientSettings.builder()
             .applyConnectionString(ConnectionString(conf.connectionString))
             .applyToSocketSettings { s ->

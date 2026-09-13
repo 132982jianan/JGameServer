@@ -1,6 +1,6 @@
 package com.jacey.game.common.framework.net
 
-import com.jacey.game.common.framework.nacos.Config
+import com.jacey.game.common.framework.nacos.IConfig
 import kotlinx.serialization.Serializable
 import java.net.Inet4Address
 import java.net.NetworkInterface
@@ -10,7 +10,7 @@ data class AddressStrategy(
     val address: String? = null,
     val envVar: String? = null,
     val prefix: List<String> = listOf("192.", "172.", "10."),
-) : Config {
+) : IConfig {
     fun resolve(): String {
         address?.let { return it }
         envVar?.let { v -> System.getenv(v)?.let { return it } }

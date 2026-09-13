@@ -28,7 +28,7 @@ object Nacos {
         System.setProperty("nacos.common.processors", "1")
         System.setProperty("nacos.remote.client.grpc.pool.core.size", "2")
         System.setProperty("nacos.remote.client.grpc.pool.max.size", "8")
-        conf = ConfigLoader.loadLocal<NacosConfig>() ?: return false
+        conf = ConfigLoaderService.loadLocal<NacosConfig>() ?: return false
         val properties = Properties()
         properties.setProperty(PropertyKeyConst.SERVER_ADDR, "${conf.host}:${conf.port}")
         properties.setProperty(PropertyKeyConst.NAMESPACE, conf.namespace)
