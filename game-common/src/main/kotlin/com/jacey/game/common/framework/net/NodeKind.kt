@@ -8,11 +8,13 @@ package com.jacey.game.common.framework.net
  * - logic:   逻辑服
  * - battle:  对战服
  * - chat:    聊天服
+ *
+ * @param actorName 节点主 actor 名（Nacos 注册的 actorPath 末段，各节点启动 XxxStart 时创建同名 actor）
  */
-enum class NodeKind {
-    gm,
-    gateway,
-    logic,
-    battle,
-    chat,
+enum class NodeKind(val actorName: String) {
+    gm("gmActor"),
+    gateway("gatewayActor"),
+    logic("logicServerActor"),
+    battle("battleServerActor"),
+    chat("chatServerActor"),
 }

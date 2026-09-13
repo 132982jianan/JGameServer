@@ -1,5 +1,6 @@
 package com.jacey.game.gateway
 
+import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.gateway.actor.GatewayNodeActor
 import com.jacey.game.gateway.network.NettyServer
@@ -8,7 +9,7 @@ import com.jacey.game.gateway.network.NettyServer
 object GatewayStart {
     suspend fun startBusiness(): Boolean {
         // 创建网关主 actor
-        AkkaService.create<GatewayNodeActor>("gatewayActor")
+        AkkaService.create<GatewayNodeActor>(NodeKind.gateway.actorName)
         // 启动 Netty TCP/WebSocket
         NettyServer.start()
         return true

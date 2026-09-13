@@ -11,7 +11,7 @@ object ChatStart {
     suspend fun startBusiness(): Boolean {
         NodeRegister.subscribe(NodeKind.gm)
         NodeRegister.subscribe(NodeKind.battle)
-        AkkaService.create<ChatServerActor>("chatServerActor")
+        AkkaService.create<ChatServerActor>(NodeKind.chat.actorName)
         return true
     }
 }

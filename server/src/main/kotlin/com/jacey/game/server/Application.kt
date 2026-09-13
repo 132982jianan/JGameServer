@@ -5,7 +5,6 @@ import com.jacey.game.common.framework.process.Exit
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.required
-import kotlinx.coroutines.runBlocking
 
 /**
  * 服务器统一入口（单 jar）
@@ -24,23 +23,29 @@ suspend fun main(args: Array<String>) {
 
     // GNU 风格：同时支持 "--kind gateway" 与 "--kind=gateway"（部署 command 用等号写法）
     val parser = ArgParser("jgame-server", prefixStyle = ArgParser.OptionPrefixStyle.GNU)
+
+    // 节点类型
     val kind by parser.option(
         ArgType.Choice<NodeKind>(),
         fullName = "kind",
         description = "节点类型: gm / gateway / logic / battle / chat"
     ).required()
+
+    //节点id(可不传递)
     val id by parser.option(
         ArgType.Int,
         fullName = "id",
         description = "节点ID（可选，不传自动分配）"
     )
 
+    //解析下
     parser.parse(args)
 
-    val started = CommonStart.start(kind, id)
-
-    if (started) {
+    // 启动
+    val successFlag = CommonStart.start(kind, id)
+    if (successFlag) {
         println("[$kind] server started, waiting for exit signal...")
+        // 等待退出
         Exit.await()
     } else {
         println("[$kind] server start FAILED")

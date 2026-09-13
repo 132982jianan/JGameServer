@@ -11,7 +11,7 @@ object BattleStart {
     suspend fun startBusiness(): Boolean {
         NodeRegister.subscribe(NodeKind.gm)
         NodeRegister.subscribe(NodeKind.chat)
-        AkkaRefsB.battleServerActor = AkkaService.create<BattleServerActor>("battleServerActor")
+        AkkaRefsB.battleServerActor = AkkaService.create<BattleServerActor>(NodeKind.battle.actorName)
         AkkaRefsB.battleActionActor = AkkaService.create<BattleActionActor>("battleActionActor")
         return true
     }

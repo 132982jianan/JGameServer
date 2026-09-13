@@ -32,7 +32,7 @@ object GmStart {
         NodeRegister.subscribe(NodeKind.battle)
         NodeRegister.subscribe(NodeKind.chat)
         NodeRegister.subscribe(NodeKind.gateway)
-        AkkaService.create<GmActor>("gmActor")
+        AkkaService.create<GmActor>(NodeKind.gm.actorName)
         seedAdmin()
         startHttp(AppConfig.instance)
         return true

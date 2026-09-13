@@ -1,6 +1,7 @@
 package com.jacey.game.server
 
-import com.jacey.game.common.framework.nacos.ConfigLoader
+import com.jacey.game.battle.BattleStart
+import com.jacey.game.chat.ChatStart
 import com.jacey.game.common.framework.nacos.Nacos
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.framework.process.Exit
@@ -8,8 +9,9 @@ import com.jacey.game.common.framework.process.Log4j2
 import com.jacey.game.common.framework.mongo.Mongo
 import com.jacey.game.common.framework.redis.Redis
 import com.jacey.game.common.framework.net.NodeKind
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import com.jacey.game.gateway.GatewayStart
+import com.jacey.game.gm.GmStart
+import com.jacey.game.logic.LogicStart
 
 /**
  * 各节点通用启动序列（替代原 Spring Boot 启动 + CoreManager）
@@ -31,14 +33,7 @@ object CommonStart {
         }
 
         // 4. 节点注册 + ActorSystem（artery 地址进 Nacos metadata）
-        val actorName = when (kind) {
-            NodeKind.gm -> "gmActor"
-            NodeKind.gateway -> "gatewayActor"
-            NodeKind.logic -> "logicServerActor"
-            NodeKind.battle -> "battleServerActor"
-            NodeKind.chat -> "chatServerActor"
-        }
-        if (!NodeRegister.start(kind, requestedId, actorName)) {
+        if (!NodeRegister.start(kind, requestedId, kind.actorName)) {
             System.err.println("node register fail")
             return false
         }
@@ -59,14 +54,15 @@ object CommonStart {
         }
 
         // 7. 业务启动（各模块 XxxStart）
-        val ok = when (kind) {
-            NodeKind.gm -> com.jacey.game.gm.GmStart.startBusiness()
-            NodeKind.gateway -> com.jacey.game.gateway.GatewayStart.startBusiness()
-            NodeKind.logic -> com.jacey.game.logic.LogicStart.startBusiness()
-            NodeKind.battle -> com.jacey.game.battle.BattleStart.startBusiness()
-            NodeKind.chat -> com.jacey.game.chat.ChatStart.startBusiness()
+        val success = when (kind) {
+            NodeKind.gm -> GmStart.startBusiness()
+            NodeKind.gateway -> GatewayStart.startBusiness()
+            NodeKind.logic -> LogicStart.startBusiness()
+            NodeKind.battle -> BattleStart.startBusiness()
+            NodeKind.chat -> ChatStart.startBusiness()
         }
-        if (!ok) {
+
+        if (!success) {
             System.err.println("business start fail")
             return false
         }

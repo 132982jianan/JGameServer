@@ -1,14 +1,5 @@
 package com.jacey.game.common.constants
 
-/** 各节点主 actor 与 actor system 命名约定 */
-object GlobalConstant {
-    const val GATEWAY_ACTOR_NAME = "gatewayActor"
-    const val LOGIC_SERVER_ACTOR_NAME = "logicServerActor"
-    const val BATTLE_SERVER_ACTOR_NAME = "battleServerActor"
-    const val CHAT_SERVER_ACTOR_NAME = "chatServerActor"
-    const val GM_ACTOR_NAME = "gmActor"
-}
-
 /** GM token cookie 配置 */
 object CookieConstant {
     const val TOKEN = "token"

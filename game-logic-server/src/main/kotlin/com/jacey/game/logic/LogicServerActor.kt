@@ -2,7 +2,6 @@ package com.jacey.game.logic
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
-import com.jacey.game.common.constants.GlobalConstant
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage

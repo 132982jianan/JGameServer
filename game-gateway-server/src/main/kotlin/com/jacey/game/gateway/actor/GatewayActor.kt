@@ -2,7 +2,6 @@ package com.jacey.game.gateway.actor
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
-import com.jacey.game.common.constants.GlobalConstant
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
