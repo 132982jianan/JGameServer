@@ -1,6 +1,7 @@
-package com.jacey.game.battle
+package com.jacey.game.battle.actor
 
 import akka.actor.ActorRef
+import com.jacey.game.battle.service.BattleRoomActorManagerService
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
@@ -18,7 +19,7 @@ class BattleServerActor : BaseMessageActor() {
         registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
         registerHandler(NetMessage::class.java) { msg, sender ->
             // 客户端对战请求交给房间管理
-            BattleRooms.proxyNetMessage(msg, sender)
+            BattleRoomActorManagerService.proxyNetMessage(msg, sender)
         }
     }
 
@@ -26,12 +27,12 @@ class BattleServerActor : BaseMessageActor() {
         when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>()
-                BattleRooms.removeGatewayResponseActor(push?.sessionId ?: 0)
+                BattleRoomActorManagerService.removeGatewayResponseActor(push?.sessionId ?: 0)
             }
             RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE -> {
                 val request = msg.getProto<RemoteServer.NoticeBattleServerCreateNewBattleRequest>()
                 if (request != null) {
-                    BattleRooms.createNewBattle(request, sender)
+                    BattleRoomActorManagerService.createNewBattle(request, sender)
                 }
             }
         }

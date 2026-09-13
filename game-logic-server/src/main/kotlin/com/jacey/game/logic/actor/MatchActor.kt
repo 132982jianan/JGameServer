@@ -33,10 +33,13 @@ class MatchActor : BaseMessageActor() {
     init {
         registerHandler(LocalMessage::class.java) { msg, _ ->
             when (msg.msgId) {
+                // 定时器，请求匹配!!!
                 LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE -> MatchService.doMatch()
             }
         }
+        
         registerHandler(RemoteMessage::class.java) { msg, _ -> onBattleCreated(msg) }
+
         registerHandler(NetMessage::class.java) { msg, sender -> onNet(msg, sender) }
     }
 
@@ -57,6 +60,7 @@ class MatchActor : BaseMessageActor() {
                     null
                 )
             }
+
             Rpc.RpcNameEnum.CancelMatch_VALUE -> {
                 // CancelMatchRequest 为空消息：从玩家状态取当前匹配类型
                 val state = PlayStateService.getPlayStateByUserId(msg.userId)
@@ -98,9 +102,10 @@ class MatchActor : BaseMessageActor() {
 
     override fun preStart() {
         super.preStart()
+
         // 每秒给自己发一次匹配计算消息
-        val msg: IMessage =
-            LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE)
+        val msg: IMessage = LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE)
+
         matchJob = CoroutineScope(Dispatcher.Scheduler).launch {
             while (isActive) {
                 self().tell(msg, ActorRef.noSender())

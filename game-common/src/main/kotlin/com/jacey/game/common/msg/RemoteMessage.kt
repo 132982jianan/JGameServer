@@ -7,7 +7,9 @@ import io.github.oshai.kotlinlogging.KotlinLogging
  * 服务器之间通讯的消息载体（GM/logic/battle/chat/gateway 之间）
  */
 class RemoteMessage() : AbstractMessage() {
+    //消息体
     var data: ByteArray? = null
+
     var errorCode: Int = 0
 
     val dataLength: Int
@@ -15,15 +17,15 @@ class RemoteMessage() : AbstractMessage() {
             return data?.size ?: 0
         }
 
-    constructor(rpcNum: Int, lite: MessageLite) : this() {
-        this.msgId = rpcNum
+    constructor(msgId: Int, lite: MessageLite) : this() {
+        this.msgId = msgId
         this.data = lite.toByteArray()
     }
 
-    constructor(rpcNum: Int, builder: MessageLite.Builder) : this(rpcNum, builder.build())
+    constructor(msgId: Int, builder: MessageLite.Builder) : this(msgId, builder.build())
 
-    constructor(rpcNum: Int, errorCode: Int) : this() {
-        this.msgId = rpcNum
+    constructor(msgId: Int, errorCode: Int) : this() {
+        this.msgId = msgId
         this.errorCode = errorCode
     }
 

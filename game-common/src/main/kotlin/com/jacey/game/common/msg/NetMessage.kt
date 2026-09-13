@@ -34,20 +34,20 @@ class NetMessage() : AbstractMessage() {
         this.data = lite.toByteArray()
     }
 
-    constructor(rpcNum: Int, builder: MessageLite.Builder) : this(rpcNum, builder.build())
+    constructor(msgId: Int, builder: MessageLite.Builder) : this(msgId, builder.build())
 
-    constructor(rpcNum: Int, data: ByteArray?) : this() {
-        this.msgId = rpcNum
+    constructor(msgId: Int, data: ByteArray?) : this() {
+        this.msgId = msgId
         this.data = data
     }
 
-    constructor(rpcNum: Int, errorCode: Int) : this() {
-        this.msgId = rpcNum
+    constructor(msgId: Int, errorCode: Int) : this() {
+        this.msgId = msgId
         this.errorCode = errorCode
         this.data = null
     }
 
-    override fun toBinaryMsg(): ByteBuf {
+    override fun toByteBuf(): ByteBuf {
         val out = Unpooled.directBuffer(totalLength)
         out.writeInt(totalLength)
         out.writeInt(msgId)

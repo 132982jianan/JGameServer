@@ -7,5 +7,5 @@ import io.netty.buffer.ByteBuf
  */
 interface IMessage {
     val msgId: Int
-    fun toBinaryMsg(): ByteBuf?
+    fun toByteBuf(): ByteBuf?
 }

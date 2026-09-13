@@ -7,6 +7,6 @@ import io.netty.handler.codec.MessageToByteEncoder
 
 class ProtocolEncoder : MessageToByteEncoder<NetMessage>() {
     override fun encode(ctx: ChannelHandlerContext, msg: NetMessage, out: ByteBuf) {
-        out.writeBytes(msg.toBinaryMsg())
+        out.writeBytes(msg.toByteBuf())
     }
 }

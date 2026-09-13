@@ -1,6 +1,7 @@
-package com.jacey.game.battle
+package com.jacey.game.battle.actor
 
 import akka.actor.ActorRef
+import com.google.protobuf.MessageLite
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.msg.NetMessage
@@ -137,10 +138,10 @@ class BattleActionActor : BaseMessageActor() {
 
     private fun buildResponse(
         userId: Int,
-        rpcNum: Int,
-        builder: com.google.protobuf.MessageLite.Builder
+        msgId: Int,
+        builder: MessageLite.Builder
     ): NetMessage {
-        val message = NetMessage(rpcNum, builder)
+        val message = NetMessage(msgId, builder)
         message.userId = userId
         return message
     }

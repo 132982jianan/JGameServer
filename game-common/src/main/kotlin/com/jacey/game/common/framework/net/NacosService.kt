@@ -91,7 +91,10 @@ object NacosService {
     /** 启动 actor system（注册成功后调用，端口已确定；loglevel 等来自 Nacos net.yml） */
     fun startActorSystem() {
         AkkaService.start(
-            selfNodeInfo.kind.name, selfNodeInfo.nodeId, selfNodeInfo.arteryPort, selfNodeInfo.arteryHost,
+            selfNodeInfo.kind.name,
+            selfNodeInfo.nodeId,
+            selfNodeInfo.arteryPort,
+            selfNodeInfo.arteryHost,
             netConfig.akka.loglevel
         )
     }

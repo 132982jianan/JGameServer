@@ -1,5 +1,8 @@
 package com.jacey.game.battle
 
+import com.jacey.game.battle.actor.BattleActionActor
+import com.jacey.game.battle.actor.BattleServerActor
+import com.jacey.game.battle.service.BattleAkkaRefManagerService
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
@@ -10,13 +13,9 @@ import com.jacey.game.common.framework.net.NacosService
 object BattleStart {
     suspend fun startBusiness(): Boolean {
         NacosService.subscribeByNodeKind(NodeKind.chat)
-        AkkaRefsB.battleServerActor = AkkaService.create<BattleServerActor>(NodeKind.battle.actorName)
-        AkkaRefsB.battleActionActor = AkkaService.create<BattleActionActor>("battleActionActor")
+        BattleAkkaRefManagerService.battleServerActor = AkkaService.create<BattleServerActor>(NodeKind.battle.actorName)
+        BattleAkkaRefManagerService.battleActionActor = AkkaService.create<BattleActionActor>("battleActionActor")
         return true
     }
 }
 
-object AkkaRefsB {
-    var battleServerActor: akka.actor.ActorRef? = null
-    var battleActionActor: akka.actor.ActorRef? = null
-}
