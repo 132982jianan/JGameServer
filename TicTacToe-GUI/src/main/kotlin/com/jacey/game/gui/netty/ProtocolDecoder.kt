@@ -12,11 +12,11 @@ class ProtocolDecoder : ByteToMessageDecoder() {
         buf.markReaderIndex()
         val totalLength = buf.readInt()
         if (readable >= totalLength) {
-            val rpcNum = buf.readInt()
+            val msgId = buf.readInt()
             val errorCode = buf.readInt()
             val bytes = ByteArray(totalLength - NettyConfig.HEADER_LENGTH)
             buf.readBytes(bytes)
-            val message = NetMessage(rpcNum, bytes)
+            val message = NetMessage(msgId, bytes)
             message.errorCode = errorCode
             out.add(message)
         } else {

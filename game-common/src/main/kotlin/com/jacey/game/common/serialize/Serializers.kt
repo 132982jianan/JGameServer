@@ -10,10 +10,10 @@ import java.nio.ByteBuffer
  * Akka remote 自定义序列化器（artery 传输 NetMessage/RemoteMessage）
  *
  * NetMessage 编解码规则：
- * rpcNum(4) errorCode(4) sessionId(4) userId(4) userIpLen(4) [userIp] [data]
+ * msgId(4) errorCode(4) sessionId(4) userId(4) userIpLen(4) [userIp] [data]
  *
  * RemoteMessage 编解码规则：
- * rpcNum(4) errorCode(4) [data]
+ * msgId(4) errorCode(4) [data]
  */
 class NetMessageSerializer : Serializer {
     override fun identifier(): Int = 2001

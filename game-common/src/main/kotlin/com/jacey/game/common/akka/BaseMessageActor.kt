@@ -60,13 +60,13 @@ abstract class BaseMessageActor : CoroutineActor() {
                     // 因为现在是采用抛出异常方式，因此这里进行错误处理
                     is NetMessage -> sendErrorToClient(msg, e.errorCode, sender)
                     is RemoteMessage -> sendErrorToRemoteServer(msg, e.errorCode, sender)
-                    else -> log.error(e) { "RpcErrorException on local msg rpcNum=${msg.msgId}" }
+                    else -> log.error(e) { "RpcErrorException on local msg msgId=${msg.msgId}" }
                 }
             } catch (e: Exception) {
-                log.error(e) { "handle msg fail, rpcNum=${msg.msgId}" }
+                log.error(e) { "handle msg fail, msgId=${msg.msgId}" }
             }
         } else {
-            log.error { "no handler for ${msg::class.simpleName} rpcNum=${msg.msgId}" }
+            log.error { "no handler for ${msg::class.simpleName} msgId=${msg.msgId}" }
         }
     }
 

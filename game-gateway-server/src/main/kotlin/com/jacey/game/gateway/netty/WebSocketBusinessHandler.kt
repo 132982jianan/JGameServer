@@ -53,10 +53,10 @@ class WebSocketBusinessHandler : AbsBusinessHandler() {
     private fun decodeFull(buf: ByteBuf): NetMessage? {
         if (buf.readableBytes() < NettyServer.HEADER_LENGTH) return null
         val totalLength = buf.readInt()
-        val rpcNum = buf.readInt()
+        val msgId = buf.readInt()
         val errorCode = buf.readInt()
         val bytes = ByteArray(totalLength - NettyServer.HEADER_LENGTH)
         buf.readBytes(bytes)
-        return NetMessage(rpcNum, bytes).also { it.errorCode = errorCode }
+        return NetMessage(msgId, bytes).also { it.errorCode = errorCode }
     }
 }

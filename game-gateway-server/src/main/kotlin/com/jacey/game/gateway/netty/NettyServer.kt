@@ -29,7 +29,7 @@ import kotlinx.coroutines.Job
 /**
  * Netty 服务器（object 单例）
  *
- * 线协议不变：packetLength | rpcNum | errorCode | protobuf body
+ * 线协议不变：packetLength | msgId | errorCode | protobuf body
  * - TCP 端口：net.yml gateway.tcp（原 10001）
  * - WebSocket 端口：net.yml gateway.ws（原 10002，路径 /websocket）
  */

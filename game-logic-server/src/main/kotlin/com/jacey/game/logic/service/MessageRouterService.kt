@@ -27,7 +27,7 @@ object MessageRouterService {
 
     /** 推送 NetMessage 到指定 userId 的客户端 */
     suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage): Boolean {
-        logger.info { "【推送消息】userId=$userId rpcNum=${netMsg.msgId}" }
+        logger.info { "【推送消息】userId=$userId msgId=${netMsg.msgId}" }
         val sessionId = SessionIdRedis.getOneUserIdToSessionId(userId)
         return if (sessionId != null) {
             sendNetMsgToOneSession(sessionId, netMsg)

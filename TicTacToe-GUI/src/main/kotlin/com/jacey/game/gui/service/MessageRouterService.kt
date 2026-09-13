@@ -18,29 +18,29 @@ import kotlin.system.exitProcess
 /**
  * 客户端消息路由（object 单例，原 MessageManager + 各 actor 的响应处理）
  *
- * rpcNum -> handler 显式注册；UI 更新通过 SwingUtilities.invokeLater 回到 EDT。
+ * msgId -> handler 显式注册；UI 更新通过 SwingUtilities.invokeLater 回到 EDT。
  */
 object MessageRouterService {
     private val logger = KotlinLogging.logger {}
     private val handlers = HashMap<Int, suspend (NetMessage) -> Unit>()
 
-    fun register(rpcNum: Int, handler: suspend (NetMessage) -> Unit) {
-        require(!handlers.containsKey(rpcNum)) { "duplicate handler rpcNum=$rpcNum" }
-        handlers[rpcNum] = handler
+    fun register(msgId: Int, handler: suspend (NetMessage) -> Unit) {
+        require(!handlers.containsKey(msgId)) { "duplicate handler msgId=$msgId" }
+        handlers[msgId] = handler
     }
 
     /** Netty 线程收到服务器消息后调用：切到协程再分发 */
     fun dispatch(msg: NetMessage) {
         val handler = handlers[msg.msgId]
         if (handler == null) {
-            logger.error { "【消息处理异常】不支持该协议 rpcNum=${msg.msgId}" }
+            logger.error { "【消息处理异常】不支持该协议 msgId=${msg.msgId}" }
             return
         }
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 handler(msg)
             } catch (e: Exception) {
-                logger.error(e) { "handle msg fail rpcNum=${msg.msgId}" }
+                logger.error(e) { "handle msg fail msgId=${msg.msgId}" }
             }
         }
     }

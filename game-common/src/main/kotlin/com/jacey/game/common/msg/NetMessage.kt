@@ -11,7 +11,7 @@ import io.netty.buffer.Unpooled
 /**
  * 网络消息（客户端 <-> gateway <-> 各服务器 通用载体）
  *
- * 线协议：packetLength | rpcNum | errorCode | protobuf body
+ * 线协议：packetLength | msgId | errorCode | protobuf body
  */
 class NetMessage() : AbstractMessage() {
     var data: ByteArray? = null

@@ -24,12 +24,12 @@
 
 ```
  ----------------消息协议格式---------------------
-  packetLength | rpcNum | errorCode | body
+  packetLength | msgId | errorCode | body
      int          int       int       byte[]
 
 协议由四部分组成，前三部分为协议头，用于描述消息，第四部分为消息主体
 第一部分：packetLength  4字节 int 类型 用于描述这个数据包的长度
-第二部分：rpcNum  4字节 int 类型 用于描述当前消息的协议类型
+第二部分：msgId  4字节 int 类型 用于描述当前消息的协议类型
 第三部分：errorCode 4字节 int 类型 用于描述消息的错误类型
 第四部分：body n字节 byte[] 类型 用于存储经protobuf序列化过的消息主体
 ```

@@ -38,7 +38,7 @@ abstract class AbsBusinessHandler : ChannelInboundHandlerAdapter() {
             is NetMessage -> {
                 val session = ClientSessionManagerService.sessionOf(ctx.channel())
                 if (session == null) {
-                    logger.warn { "no session bound, drop msg rpcNum=${msg.msgId}" }
+                    logger.warn { "no session bound, drop msg msgId=${msg.msgId}" }
                     return
                 }
 

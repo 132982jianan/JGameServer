@@ -1,7 +1,7 @@
 package com.jacey.game.gateway.service
 
 /**
- * 网关消息分区：rpcNum 区间 → 路由分区（与 rpc.proto 的号段分配约定一致）
+ * 网关消息分区：msgId 区间 → 路由分区（与 rpc.proto 的号段分配约定一致）
  *
  * - 100-109      AUTH   注册/登录（未登录可访问）
  * - 110-199      LOGIC  逻辑类请求（匹配等，须登录）→ 主逻辑服

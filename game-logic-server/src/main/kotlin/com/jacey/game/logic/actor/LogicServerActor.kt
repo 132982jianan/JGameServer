@@ -14,7 +14,7 @@ import com.jacey.game.logic.service.OnlineClientService
 
 /**
  * 逻辑服主 Actor（原 LogicServerActor）
- * - 顶层分发：按 rpcNum 投递给业务子 actor（原 MessageManager.handleRequest）
+ * - 顶层分发：按 msgId 投递给业务子 actor（原 MessageManager.handleRequest）
  * - 客户端离线通知处理（匹配中取消、会话移除）
  * - 节点发现/存活由 Nacos 维护，无 GM 注册流程
  */
@@ -37,11 +37,11 @@ class LogicServerActor : BaseMessageActor() {
 
         if (targetActorRef != null) {
             logger.info {
-                "【分发】rpcNum=${msg.msgId} -> ${targetActorRef.path().name()} sender=${sender?.path() ?: "noSender"}"
+                "【分发】msgId=${msg.msgId} -> ${targetActorRef.path().name()} sender=${sender?.path() ?: "noSender"}"
             }
             targetActorRef.tell(msg, sender)
         } else {
-            logger.error { "【分发失败】无业务 actor 处理 rpcNum=${msg.msgId}" }
+            logger.error { "【分发失败】无业务 actor 处理 msgId=${msg.msgId}" }
             sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.ServerError_VALUE), self())
         }
     }

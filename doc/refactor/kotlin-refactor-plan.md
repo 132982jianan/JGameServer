@@ -35,7 +35,7 @@
 - 配置：`propertyConfig.xml`+`config.properties`（每服务一套，业务项少而分散）、`application.conf`（akka）、`application.yml`（mongo uri，env `MONGO_URI`）、`redis.properties`、`spring.xml`、`logback.xml`。
 - GM HTTP：`/gm/gmUserLogin`、`/gm/executeGmCmd`、`/gateway`（ClientController 下发网关地址）；cookie+token 会话存 Redis；`GmUserSeedConfig` 启动种 admin 账号。
 - DB：`game-db` DAO = MongoTemplate + spring-data-redis `ValueOperations`；实体 4 个（PlayUser/PlayState/GmUser/BattleRecord）+ BattleInfo；`counters` 集合自增 id。
-- 客户端线协议（**不变**）：`packetLength | rpcNum | errorCode | protobuf body`，gateway 暴露 TCP 10001 + WebSocket。
+- 客户端线协议（**不变**）：`packetLength | msgId | errorCode | protobuf body`，gateway 暴露 TCP 10001 + WebSocket。
 - 部署：`deploy/docker-compose.yml`（mongo/redis + 5 个 jre8 容器挂 target jar）、`start-server.bat`（mvn 打包 → compose up）。
 
 ## 3. 目标结构（Gradle 多模块）
@@ -82,7 +82,7 @@ JGameServer/
 
 ### 5.1 消息协议层（不变，搬进 game-common）
 
-线协议 `packetLength|rpcNum|errorCode|protobuf`、`NetMessage`/`RemoteMessage` 语义、protobuf 序列化绑定全部保留，代码改 Kotlin。akka remote serializer 保留（NetMessage/RemoteMessage → 自定义 serializer，JDK 序列化仍关闭）。
+线协议 `packetLength|msgId|errorCode|protobuf`、`NetMessage`/`RemoteMessage` 语义、protobuf 序列化绑定全部保留，代码改 Kotlin。akka remote serializer 保留（NetMessage/RemoteMessage → 自定义 serializer，JDK 序列化仍关闭）。
 
 ### 5.2 包装层（game-common，新增 `coroutine/` 包）
 

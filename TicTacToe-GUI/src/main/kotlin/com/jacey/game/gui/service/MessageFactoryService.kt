@@ -5,7 +5,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * GUI 客户端消息注册（原各 actor 的响应注册汇总）
- * 在 main 中调用一次完成全部 rpcNum -> handler 绑定。
+ * 在 main 中调用一次完成全部 msgId -> handler 绑定。
  */
 object MessageFactoryService {
     private val logger = KotlinLogging.logger {}

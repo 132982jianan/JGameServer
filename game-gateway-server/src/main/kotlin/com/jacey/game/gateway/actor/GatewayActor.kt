@@ -35,6 +35,6 @@ class GatewayNodeActor : BaseMessageActor() {
 
     private suspend fun onNet(msg: NetMessage) {
         // 网关本身不处理客户端 NetMessage（由 ClientSessionActor 处理）；此为兜底
-        logger.warn { "GatewayActor got unexpected NetMessage rpcNum=${msg.msgId}" }
+        logger.warn { "GatewayActor got unexpected NetMessage msgId=${msg.msgId}" }
     }
 }

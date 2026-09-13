@@ -6,7 +6,7 @@ import kotlin.test.assertEquals
 
 /**
  * 网关分区路由映射验证：
- * 每个客户端可请求的 rpcNum 必须落入正确分区（新增消息若漏配分区，此处 fail）。
+ * 每个客户端可请求的 msgId 必须落入正确分区（新增消息若漏配分区，此处 fail）。
  */
 class GatewayZoneTest {
 
@@ -30,7 +30,7 @@ class GatewayZoneTest {
             Rpc.RpcNameEnum.PlacePieces_VALUE,
             Rpc.RpcNameEnum.ReadyToStartGame_VALUE,
         ).forEach { id ->
-            assertEquals(EGatewayZone.BATTLE, EGatewayZone.calEGatewayZoneByMsgId(id), "rpcNum=$id 应为 BATTLE")
+            assertEquals(EGatewayZone.BATTLE, EGatewayZone.calEGatewayZoneByMsgId(id), "msgId=$id 应为 BATTLE")
         }
     }
 
@@ -49,7 +49,7 @@ class GatewayZoneTest {
             Rpc.RpcNameEnum.RpcBattleChatTextPush_VALUE,
             Rpc.RpcNameEnum.NoneRpc_VALUE,
         ).forEach { id ->
-            assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(id), "rpcNum=$id 不应有分区")
+            assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(id), "msgId=$id 不应有分区")
         }
     }
 

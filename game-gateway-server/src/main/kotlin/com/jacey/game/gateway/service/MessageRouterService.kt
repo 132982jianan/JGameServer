@@ -31,10 +31,10 @@ object MessageRouterService {
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
         val ref = NacosService.getRandomActorRefByNodeKind(NodeKind.logic) ?: run {
-            logger.error { "【转发失败】logic 不可用 rpcNum=${msg.msgId}" }
+            logger.error { "【转发失败】logic 不可用 msgId=${msg.msgId}" }
             return false
         }
-        logger.info { "【转发 logic】rpcNum=${msg.msgId} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        logger.info { "【转发 logic】msgId=${msg.msgId} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }
@@ -48,10 +48,10 @@ object MessageRouterService {
         } ?: NacosService.getRandomActorRefByNodeKind(NodeKind.logic)
 
         if (ref == null) {
-            logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.msgId} mainId=$mainId" }
+            logger.error { "【转发失败】mainLogic 不可用 msgId=${msg.msgId} mainId=$mainId" }
             return false
         }
-        logger.info { "【转发 mainLogic】rpcNum=${msg.msgId} mainId=$mainId sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        logger.info { "【转发 mainLogic】msgId=${msg.msgId} mainId=$mainId sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }

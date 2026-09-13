@@ -43,7 +43,7 @@ class ClientSessionActor(private val clientSession: ClientSession) : BaseMessage
     }
 
     private suspend fun onNetMessage(msg: NetMessage) {
-        log.info { "【客户端消息】sessionId=${clientSession.sessionId} rpcNum=${msg.msgId} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
+        log.info { "【客户端消息】sessionId=${clientSession.sessionId} msgId=${msg.msgId} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
         msg.userId = clientSession.userId
         msg.sessionId = clientSession.sessionId
 
@@ -53,7 +53,7 @@ class ClientSessionActor(private val clientSession: ClientSession) : BaseMessage
             EGatewayZone.BATTLE -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE) { MessageRouterService.forwardToBattle(msg, responseActor) }
             EGatewayZone.CHAT -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE) { MessageRouterService.forwardToChat(msg, responseActor) }
             // 区间外（含推送号段 20001+）：客户端不可主动请求
-            null -> log.error { "【netMessage解析异常】not support rpcNum=${msg.msgId}" }
+            null -> log.error { "【netMessage解析异常】not support msgId=${msg.msgId}" }
         }
     }
 

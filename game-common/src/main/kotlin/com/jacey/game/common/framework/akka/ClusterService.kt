@@ -23,7 +23,7 @@ object ClusterService {
     /** 单向发送（fire-and-forget）。返回 false = 节点不在线（已记日志） */
     suspend fun tell(kind: NodeKind, nodeId: Int, msg: RemoteMessage): Boolean {
         val ref = NacosService.getActorRefByNodeKindAndNodeId(kind, nodeId) ?: run {
-            logger.error { "【RPC失败】节点不在线 kind=$kind nodeId=$nodeId rpcNum=${msg.msgId}" }
+            logger.error { "【RPC失败】节点不在线 kind=$kind nodeId=$nodeId msgId=${msg.msgId}" }
             return false
         }
         ref.tell(msg, ActorRef.noSender())
@@ -42,7 +42,7 @@ object ClusterService {
         timeout: Duration = 5.seconds,
     ): RemoteMessage? {
         val ref = NacosService.getActorRefByNodeKindAndNodeId(kind, nodeId) ?: run {
-            logger.error { "【RPC失败】节点不在线 kind=$kind nodeId=$nodeId rpcNum=${msg.msgId}" }
+            logger.error { "【RPC失败】节点不在线 kind=$kind nodeId=$nodeId msgId=${msg.msgId}" }
             return null
         }
         val reply = ref.askAwait(msg, timeout)
@@ -56,7 +56,7 @@ object ClusterService {
         timeout: Duration = 5.seconds,
     ): RemoteMessage? {
         val info = NacosService.getNodeInfoListByNodeKind(kind).randomOrNull() ?: run {
-            logger.error { "【RPC失败】无在线节点 kind=$kind rpcNum=${msg.msgId}" }
+            logger.error { "【RPC失败】无在线节点 kind=$kind msgId=${msg.msgId}" }
             return null
         }
         return askAwait(kind, info.nodeId, msg, timeout)
