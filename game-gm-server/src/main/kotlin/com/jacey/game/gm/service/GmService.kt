@@ -1,7 +1,7 @@
-package com.jacey.game.gm
+package com.jacey.game.gm.service
 
-import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
+import com.jacey.game.common.framework.net.NodeKind
 
 /**
  * GM 网关入口查询（原 GmRegistry 的注册表部分已由 Nacos 取代）

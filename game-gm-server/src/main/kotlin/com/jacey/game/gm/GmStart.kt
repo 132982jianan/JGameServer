@@ -6,6 +6,7 @@ import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.constants.CookieConstant
 import com.jacey.game.db.service.GmUserService
+import com.jacey.game.gm.service.GmService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
