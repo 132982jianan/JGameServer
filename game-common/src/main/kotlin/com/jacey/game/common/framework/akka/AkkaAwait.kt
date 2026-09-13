@@ -46,11 +46,15 @@ suspend fun <T> ActorRef.askAwaitAs(msg: Any, timeout: Duration = 5.seconds): T 
 /** 挂起式 actorSelection 解析：把 path 解析为 ActorRef（桥接 resolveOneCS，非阻塞） */
 suspend fun ActorSelection.resolveAwait(timeout: Duration = 5.seconds): ActorRef {
     return suspendCancellableCoroutine { cont ->
+        // 重点!!! resolveOneCS是内部的
         val future = resolveOneCS(java.time.Duration.ofMillis(timeout.inWholeMilliseconds))
+
         future.whenComplete { ref, error ->
             when {
+                // 没获取到!!!
                 error != null -> cont.cancel(error)
-                // 重点!!! 转为ActorRef
+
+                // 重点!!! 转为ActorRef，从而同步非阻塞写法
                 else -> cont.resume(ref)
             }
         }

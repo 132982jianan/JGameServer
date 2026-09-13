@@ -80,7 +80,7 @@ class BattleServerActor : BaseMessageActor() {
             .setAkkaPath(NodeRegister.selfInfo.actorPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
-        val gmRef = NodeRegister.actorRefOf(NodeKind.gm, 1)
+        val gmRef = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         gmRef?.tell(RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, request), self())
     }
 

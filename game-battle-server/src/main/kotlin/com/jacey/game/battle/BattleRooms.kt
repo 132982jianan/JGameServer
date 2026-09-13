@@ -157,7 +157,7 @@ class BaseBattleActor : BaseMessageActor() {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
             builder
         )
-        val chatRef = com.jacey.game.common.framework.net.NodeRegister.randomActorRefOf(
+        val chatRef = com.jacey.game.common.framework.net.NodeRegister.getRandomActorRefByNodeKind(
             com.jacey.game.common.framework.net.NodeKind.chat)
         chatRef?.tell(remoteMessage, self())
     }

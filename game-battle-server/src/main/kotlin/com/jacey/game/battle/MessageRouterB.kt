@@ -13,7 +13,7 @@ object MessageRouterB {
     var isConnectedToGm: Boolean = false
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: akka.actor.ActorRef?) {
-        val ref = NodeRegister.actorRefOf(NodeKind.gm, 1)
+        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         ref?.tell(msg, sender) ?: logger.error { "gm actor not found" }
     }
 }

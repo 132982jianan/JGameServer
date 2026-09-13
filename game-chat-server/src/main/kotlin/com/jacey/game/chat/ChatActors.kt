@@ -78,7 +78,7 @@ object ChatMessageRouter {
     }
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NodeRegister.actorRefOf(NodeKind.gm, 1)
+        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         ref?.tell(msg, sender)
     }
 }

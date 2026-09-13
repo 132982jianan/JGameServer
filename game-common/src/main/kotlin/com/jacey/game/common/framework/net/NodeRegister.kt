@@ -35,6 +35,7 @@ object NodeRegister {
     /** 各类型节点的主 actor：(kind, nodeId) -> resolved ActorRef（惰性解析 + 缓存）
      *  key 必须含 kind：所有节点类型 nodeId 都从 1 开始，仅用 nodeId 会串节点（gateway 拿 gm 的 ref 发消息） */
     private data class ActorCacheKey(val kind: NodeKind, val nodeId: Int)
+
     private val actorRefs = ConcurrentHashMap<ActorCacheKey, akka.actor.ActorRef>()
 
     /**
@@ -154,23 +155,25 @@ object NodeRegister {
      * 取某节点的 ActorRef（挂起解析并缓存；同步写法非阻塞）
      * 远端节点 actor path 首次访问时 resolve，之后直接复用
      */
-    suspend fun actorRefOf(kind: NodeKind, nodeId: Int): ActorRef? {
+    suspend fun getActorRefByNodeKindAndNodeId(kind: NodeKind, nodeId: Int): ActorRef? {
         val key = ActorCacheKey(kind, nodeId)
         actorRefs[key]?.let { return it }
         val info = nodeOf(kind, nodeId) ?: return null
         val selection = AkkaService.system.actorSelection(info.actorPath)
+
+        // 这一步是扩展方法同步非阻塞写法!!!
         val ref = runCatching { selection.resolveAwait() }.getOrNull() ?: return null
         actorRefs[key] = ref
         return ref
     }
 
     /** 负载均衡：随机取一个在线节点 actor（原 LoadBalanceService.getOneXxxServer 语义） */
-    suspend fun randomActorRefOf(kind: NodeKind): ActorRef? {
+    suspend fun getRandomActorRefByNodeKind(kind: NodeKind): ActorRef? {
         val list = nodesOf(kind)
         if (list.isEmpty()) {
             return null
         }
         val info = list.random()
-        return actorRefOf(kind, info.nodeId)
+        return getActorRefByNodeKindAndNodeId(kind, info.nodeId)
     }
 }

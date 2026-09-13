@@ -107,7 +107,7 @@ object SessionManagerService {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
             push
         )
-        NodeRegister.actorRefOf(kind, serverId)?.tell(remoteMsg, ActorRef.noSender())
+        NodeRegister.getActorRefByNodeKindAndNodeId(kind, serverId)?.tell(remoteMsg, ActorRef.noSender())
     }
 
     /** 通知用户当前对局所在的 battle / chat 服务器 */

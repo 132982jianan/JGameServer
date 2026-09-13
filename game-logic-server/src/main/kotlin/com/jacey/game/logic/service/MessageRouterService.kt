@@ -55,7 +55,7 @@ object MessageRouterService {
         userIds: List<Int>,
         sender: ActorRef?
     ): Boolean {
-        val ref = NodeRegister.randomActorRefOf(NodeKind.battle)
+        val ref = NodeRegister.getRandomActorRefByNodeKind(NodeKind.battle)
         if (ref != null) {
             val battleRoomInfo = RemoteServer.BattleRoomInfo.newBuilder()
                 .setBattleType(battleType)
@@ -75,13 +75,13 @@ object MessageRouterService {
     }
 
     suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
-        val ref = NodeRegister.actorRefOf(NodeKind.gateway, gatewayId) ?: return false
+        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NodeRegister.actorRefOf(NodeKind.gm, 1)
+        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         ref?.tell(msg, sender) ?: logger.error { "gm actor not found" }
     }
 }
