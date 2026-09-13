@@ -4,6 +4,7 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.db.service.PlayStateService
+import com.jacey.game.db.service.PlayUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -105,8 +106,25 @@ object MatchService {
                     battleId
                 )
             }
+            sendMatchSuccessPush(battleType, battleId, userIds)
         } else {
             sendMatchFailPush(battleType, userIds)
+        }
+    }
+
+    /** 匹配成功推送（原 MatchActor.onBattleCreated：battle 响应已被 askAwait 消费，推送在 ask 调用方完成） */
+    private suspend fun sendMatchSuccessPush(battleType: CommonEnum.BattleTypeEnum, battleId: String, userIds: List<Int>) {
+        val pushBuilder = CommonMsg.MatchResultPush.newBuilder()
+            .setIsSuccess(true)
+            .setBattleType(battleType)
+            .setBattleId(battleId)
+        for (userId in userIds) {
+            val brief = PlayUserService.getUserBriefInfoByUserId(userId)
+            if (brief != null) pushBuilder.addUserBriefInfos(brief)
+        }
+        val netMsg = NetMessage(21001, pushBuilder) // RpcMatchResultPush
+        for (userId in userIds) {
+            MessageRouterService.sendNetMsgToOneUser(userId, netMsg)
         }
     }
 

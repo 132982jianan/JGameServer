@@ -30,8 +30,7 @@ class LogicServerActor : BaseMessageActor() {
             Rpc.RpcNameEnum.Regist_VALUE -> ActorRefManagerService.registActor
             Rpc.RpcNameEnum.Login_VALUE -> ActorRefManagerService.loginActor
             Rpc.RpcNameEnum.Match_VALUE,
-            Rpc.RpcNameEnum.CancelMatch_VALUE,
-            Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> ActorRefManagerService.matchActor
+            Rpc.RpcNameEnum.CancelMatch_VALUE -> ActorRefManagerService.matchActor
 
             else -> null
         }
