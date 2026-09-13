@@ -4,6 +4,8 @@ import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.framework.process.Exit
 import com.jacey.game.common.msg.IMessage
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
@@ -32,6 +34,13 @@ class GatewayNodeActor : BaseMessageActor() {
         registerHandler(NetMessage::class.java) { msg, _ -> onNet(msg) }
     }
 
+    override fun preStart() {
+        super.preStart()
+
+        // 重连？
+        startReconnect()
+    }
+
     override suspend fun onTerminated(terminated: akka.actor.Terminated) {
         MessageRouterService.isConnectedToGm = false
         logger.warn { "GM connection lost, restarting registration task (5s)" }
@@ -53,9 +62,10 @@ class GatewayNodeActor : BaseMessageActor() {
                     stopReconnect()
                 } else {
                     logger.error { "【GM服务器注册失败】errorCode=${msg.errorCode}" }
-                    com.jacey.game.common.framework.process.Exit.exit(0)
+                    Exit.exit(0)
                 }
             }
+
             RemoteServer.RemoteRpcNameEnum.RemoteRpcLogicServerNoticeGatewayForceOfflineClient_VALUE -> {
                 val push = msg.getProto<RemoteServer.LogicServerNoticeGatewayForceOfflineClientPush>()
                 if (push != null) {
@@ -90,13 +100,12 @@ class GatewayNodeActor : BaseMessageActor() {
 
     private fun startReconnect() {
         if (reconnectJob == null) {
-            val scope = CoroutineScope(com.jacey.game.common.framework.process.Dispatcher.Scheduler)
-            val msg: IMessage =
-                LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
+            val scope = CoroutineScope(Dispatcher.Scheduler)
+            val localMessage: IMessage = LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
             reconnectJob = scope.launch {
                 kotlinx.coroutines.delay(0)
                 while (isActive) {
-                    self().tell(msg, ActorRef.noSender())
+                    self().tell(localMessage, ActorRef.noSender())
                     kotlinx.coroutines.delay(5000)
                 }
             }
@@ -106,10 +115,5 @@ class GatewayNodeActor : BaseMessageActor() {
     private fun stopReconnect() {
         reconnectJob?.cancel()
         reconnectJob = null
-    }
-
-    override fun preStart() {
-        super.preStart()
-        startReconnect()
     }
 }

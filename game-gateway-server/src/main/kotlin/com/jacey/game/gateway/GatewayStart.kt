@@ -10,8 +10,10 @@ object GatewayStart {
     suspend fun startBusiness(): Boolean {
         // 创建网关主 actor
         AkkaService.create<GatewayNodeActor>(NodeKind.gateway.actorName)
-        // 启动 Netty TCP/WebSocket
+
+        // 启动 Netty TCP/WebSocket,接受客户端连接
         NettyServer.start()
+
         return true
     }
 }
