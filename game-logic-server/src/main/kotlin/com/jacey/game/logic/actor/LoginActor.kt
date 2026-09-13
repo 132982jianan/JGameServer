@@ -87,7 +87,7 @@ class LoginActor : BaseMessageActor() {
         // 6. 绑定 sessionId <-> userId，并记录会话路由到本 logic（gateway 断线通知依据）
         SessionIdRedis.setOneUserIdToSessionId(userId, sessionId)
         SessionIdRedis.setOneSessionIdToUserId(sessionId, userId)
-        BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NacosService.selfId)
+        BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NacosService.selfNodeId)
         // 7. 记录该玩家的 gateway ResponseActor
         OnlineClientService.addSessionIdToGatewayResponseActor(sessionId, sender)
         // 8. 修改玩家在线状态

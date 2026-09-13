@@ -48,7 +48,7 @@ object NettyServer {
 
     suspend fun start() {
         val conf = AppConfig.instance
-        val ports = NacosService.netConf.portOf(NodeKind.gateway, NacosService.selfId)
+        val ports = NacosService.netConfig.portOf(NodeKind.gateway, NacosService.selfNodeId)
         val tcpPort = ports.tcp
         val wsPort = ports.ws
 
@@ -128,7 +128,7 @@ object NettyServer {
 
             // sessionId 与 gatewayId 绑定（redis）
             BattleInfoService.setOneSessionIdToGatewayId(
-                sessionId, com.jacey.game.common.framework.net.NacosService.selfId
+                sessionId, com.jacey.game.common.framework.net.NacosService.selfNodeId
             )
             logger.info { "session attached: sessionId=$sessionId ip=${session.userIp}" }
         }

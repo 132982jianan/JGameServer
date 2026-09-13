@@ -76,8 +76,8 @@ class BattleServerActor : BaseMessageActor() {
         logger.info { "【正在尝试连接GM服务器....】" }
         val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
             .setServerType(CommonEnum.RemoteServerTypeEnum.ServerTypeBattle)
-            .setServerId(NacosService.selfId)
-            .setAkkaPath(NacosService.selfInfo.actorPath)
+            .setServerId(NacosService.selfNodeId)
+            .setAkkaPath(NacosService.selfNodeInfo.actorPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
         val gmRef = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)

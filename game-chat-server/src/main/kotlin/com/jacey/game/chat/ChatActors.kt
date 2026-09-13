@@ -35,7 +35,7 @@ object ChatRooms {
     suspend fun addChatRoomActor(battleId: String, actor: ActorRef) {
         battleIdToChatRoomActor[battleId] = actor
         // battleId <-> chatServerId 绑定
-        BattleInfoService.setOneBattleIdToChatServerId(battleId, NacosService.selfId)
+        BattleInfoService.setOneBattleIdToChatServerId(battleId, NacosService.selfNodeId)
     }
 
     suspend fun removeChatRoomActor(battleId: String) {
@@ -180,8 +180,8 @@ class ChatServerActor : BaseMessageActor() {
         logger.info { "【正在尝试连接GM服务器....】" }
         val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
             .setServerType(com.jacey.game.common.proto3.CommonEnum.RemoteServerTypeEnum.ServerTypeChat)
-            .setServerId(NacosService.selfId)
-            .setAkkaPath(NacosService.selfInfo.actorPath)
+            .setServerId(NacosService.selfNodeId)
+            .setAkkaPath(NacosService.selfNodeInfo.actorPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
         ChatMessageRouter.sendRemoteToGm(

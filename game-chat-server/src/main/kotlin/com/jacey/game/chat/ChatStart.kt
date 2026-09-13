@@ -9,8 +9,8 @@ import com.jacey.game.common.framework.net.NacosService
  */
 object ChatStart {
     suspend fun startBusiness(): Boolean {
-        NacosService.subscribe(NodeKind.gm)
-        NacosService.subscribe(NodeKind.battle)
+        NacosService.subscribeByNodeKind(NodeKind.gm)
+        NacosService.subscribeByNodeKind(NodeKind.battle)
         AkkaService.create<ChatServerActor>(NodeKind.chat.actorName)
         return true
     }

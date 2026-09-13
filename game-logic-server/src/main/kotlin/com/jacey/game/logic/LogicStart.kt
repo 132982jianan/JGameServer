@@ -14,9 +14,9 @@ object LogicStart {
         val conf = AppConfig.instance
 
         // 订阅其它节点
-        NacosService.subscribe(NodeKind.gm)
-        NacosService.subscribe(NodeKind.battle)
-        NacosService.subscribe(NodeKind.chat)
+        NacosService.subscribeByNodeKind(NodeKind.gm)
+        NacosService.subscribeByNodeKind(NodeKind.battle)
+        NacosService.subscribeByNodeKind(NodeKind.chat)
 
         // 创建 actors
         ActorRefManagerService.logicServerActor = ActorFactoryService.createLogicServerActor()

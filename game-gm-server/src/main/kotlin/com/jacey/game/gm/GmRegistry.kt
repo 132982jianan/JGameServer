@@ -87,7 +87,7 @@ object GmRegistry {
 
     /** 获取最空闲网关（原 getLeisureGatewayId 语义：Nacos 负载 + connectPath） */
     suspend fun getLeisureGatewayConnectPath(): String? {
-        val gateways = NacosService.nodesOf(NodeKind.gateway)
+        val gateways = NacosService.getNodeInfoListByNodeKind(NodeKind.gateway)
         if (gateways.isEmpty()) return null
         // 简单策略：取 id 最小的在线网关（原版为 zset 负载排序；Nacos 已含健康检查）
         val gateway = gateways.minByOrNull { it.nodeId } ?: return null

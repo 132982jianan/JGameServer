@@ -124,7 +124,7 @@ object BattleRooms {
 
 /** 本节点注册信息便捷访问 */
 object NodeSelf {
-    val serverId: Int get() = com.jacey.game.common.framework.net.NacosService.selfId
+    val serverId: Int get() = com.jacey.game.common.framework.net.NacosService.selfNodeId
 }
 
 /**

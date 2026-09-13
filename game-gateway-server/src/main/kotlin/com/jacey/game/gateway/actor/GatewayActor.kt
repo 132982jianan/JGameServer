@@ -87,8 +87,8 @@ class GatewayNodeActor : BaseMessageActor() {
         logger.info { "【正在尝试连接GM服务器....】" }
         val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
             .setServerType(CommonEnum.RemoteServerTypeEnum.ServerTypeGateway)
-            .setServerId(NacosService.selfId)
-            .setAkkaPath(NacosService.selfInfo.actorPath)
+            .setServerId(NacosService.selfNodeId)
+            .setAkkaPath(NacosService.selfNodeInfo.actorPath)
             .setGatewayConnectPath(AppConfig.instance.gatewayConnectPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)

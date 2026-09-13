@@ -28,10 +28,10 @@ object GmStart {
     data class ResultVO(val code: Int, val msg: String, val data: String? = null)
 
     suspend fun startBusiness(): Boolean {
-        NacosService.subscribe(NodeKind.logic)
-        NacosService.subscribe(NodeKind.battle)
-        NacosService.subscribe(NodeKind.chat)
-        NacosService.subscribe(NodeKind.gateway)
+        NacosService.subscribeByNodeKind(NodeKind.logic)
+        NacosService.subscribeByNodeKind(NodeKind.battle)
+        NacosService.subscribeByNodeKind(NodeKind.chat)
+        NacosService.subscribeByNodeKind(NodeKind.gateway)
         AkkaService.create<GmActor>(NodeKind.gm.actorName)
         seedAdmin()
         startHttp(AppConfig.instance)
@@ -47,7 +47,7 @@ object GmStart {
     }
 
     private fun startHttp(conf: AppConfig) {
-        val ports = NacosService.netConf.portOf(NodeKind.gm, NacosService.selfId)
+        val ports = NacosService.netConfig.portOf(NodeKind.gm, NacosService.selfNodeId)
         val httpPort = if (ports.http > 0) ports.http else 80
         Http.start(httpPort, "") {
             // 原 GmController.gmUserLogin

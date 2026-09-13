@@ -25,13 +25,13 @@ object MessageRouterService {
 
     fun isAvailableForClient(): Boolean {
         return isConnectedToGm
-                && NacosService.nodesOf(NodeKind.logic).any { true }
+                && NacosService.getNodeInfoListByNodeKind(NodeKind.logic).any { true }
                 && mainLogicServerId() > 0
     }
 
     /** 主 logic 服务器 id：优先取注册时声明 isMainLogicServer 的节点（metadata 标记） */
     fun mainLogicServerId(): Int {
-        val nodes = NacosService.nodesOf(NodeKind.logic)
+        val nodes = NacosService.getNodeInfoListByNodeKind(NodeKind.logic)
         return nodes
             .firstOrNull {
                 it.nodeId > 0
