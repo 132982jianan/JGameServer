@@ -3,7 +3,7 @@ package com.jacey.game.server
 import com.jacey.game.battle.BattleStart
 import com.jacey.game.chat.ChatStart
 import com.jacey.game.common.framework.nacos.Nacos
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.process.Exit
 import com.jacey.game.common.framework.process.Log4j2
 import com.jacey.game.common.framework.mongo.Mongo
@@ -33,13 +33,13 @@ object CommonStart {
         }
 
         // 4. 节点注册 + ActorSystem（artery 地址进 Nacos metadata）
-        if (!NodeRegister.start(kind, requestedId, kind.actorName)) {
+        if (!NacosService.start(kind, requestedId, kind.actorName)) {
             System.err.println("node register fail")
             return false
         }
 
         // 启动akka
-        NodeRegister.startActorSystem()
+        NacosService.startActorSystem()
 
         // 5. Redis
         if (!Redis.init()) {

@@ -1,7 +1,7 @@
 package com.jacey.game.battle
 
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.msg.RemoteMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -13,7 +13,7 @@ object MessageRouterB {
     var isConnectedToGm: Boolean = false
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: akka.actor.ActorRef?) {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         ref?.tell(msg, sender) ?: logger.error { "gm actor not found" }
     }
 }

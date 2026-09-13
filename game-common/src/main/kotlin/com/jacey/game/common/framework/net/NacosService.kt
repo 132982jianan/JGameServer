@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap
  *
  * 替代原 Mongo *LoadBalance 注册表。
  */
-object NodeRegister {
+object NacosService {
     private val logger = KotlinLogging.logger {}
 
     lateinit var selfInfo: NodeInfo

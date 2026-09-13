@@ -2,7 +2,7 @@ package com.jacey.game.gateway.session
 
 import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.db.redis.SessionIdRedis
@@ -107,7 +107,7 @@ object SessionManagerService {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
             push
         )
-        NodeRegister.getActorRefByNodeKindAndNodeId(kind, serverId)?.tell(remoteMsg, ActorRef.noSender())
+        NacosService.getActorRefByNodeKindAndNodeId(kind, serverId)?.tell(remoteMsg, ActorRef.noSender())
     }
 
     /** 通知用户当前对局所在的 battle / chat 服务器 */

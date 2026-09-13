@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.db.service.BattleInfoService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -87,7 +87,7 @@ object GmRegistry {
 
     /** 获取最空闲网关（原 getLeisureGatewayId 语义：Nacos 负载 + connectPath） */
     suspend fun getLeisureGatewayConnectPath(): String? {
-        val gateways = NodeRegister.nodesOf(NodeKind.gateway)
+        val gateways = NacosService.nodesOf(NodeKind.gateway)
         if (gateways.isEmpty()) return null
         // 简单策略：取 id 最小的在线网关（原版为 zset 负载排序；Nacos 已含健康检查）
         val gateway = gateways.minByOrNull { it.nodeId } ?: return null

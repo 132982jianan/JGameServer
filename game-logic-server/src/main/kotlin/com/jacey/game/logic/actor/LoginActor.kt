@@ -14,7 +14,7 @@ import com.jacey.game.common.util.StringUtil
 import com.jacey.game.db.service.PlayUserService
 import com.jacey.game.db.redis.SessionIdRedis
 import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.db.service.PlayStateService
 import com.jacey.game.logic.service.MessageRouterService
 import com.jacey.game.logic.service.OnlineClientService
@@ -87,7 +87,7 @@ class LoginActor : BaseMessageActor() {
         // 6. 绑定 sessionId <-> userId，并记录会话路由到本 logic（gateway 断线通知依据）
         SessionIdRedis.setOneUserIdToSessionId(userId, sessionId)
         SessionIdRedis.setOneSessionIdToUserId(sessionId, userId)
-        BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NodeRegister.selfId)
+        BattleInfoService.setOneSessionIdToLogicServerId(sessionId, NacosService.selfId)
         // 7. 记录该玩家的 gateway ResponseActor
         OnlineClientService.addSessionIdToGatewayResponseActor(sessionId, sender)
         // 8. 修改玩家在线状态

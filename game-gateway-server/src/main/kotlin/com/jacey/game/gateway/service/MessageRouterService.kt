@@ -2,7 +2,7 @@ package com.jacey.game.gateway.service
 
 import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
@@ -25,13 +25,13 @@ object MessageRouterService {
 
     fun isAvailableForClient(): Boolean {
         return isConnectedToGm
-                && NodeRegister.nodesOf(NodeKind.logic).any { true }
+                && NacosService.nodesOf(NodeKind.logic).any { true }
                 && mainLogicServerId() > 0
     }
 
     /** 主 logic 服务器 id：优先取注册时声明 isMainLogicServer 的节点（metadata 标记） */
     fun mainLogicServerId(): Int {
-        val nodes = NodeRegister.nodesOf(NodeKind.logic)
+        val nodes = NacosService.nodesOf(NodeKind.logic)
         return nodes
             .firstOrNull {
                 it.nodeId > 0
@@ -39,7 +39,7 @@ object MessageRouterService {
     }
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
-        val ref = NodeRegister.getRandomActorRefByNodeKind(NodeKind.logic) ?: run {
+        val ref = NacosService.getRandomActorRefByNodeKind(NodeKind.logic) ?: run {
             logger.error { "【转发失败】logic 不可用 rpcNum=${msg.msgId}" }
             return false
         }
@@ -51,10 +51,10 @@ object MessageRouterService {
     suspend fun forwardToMainLogic(msg: NetMessage, sender: ActorRef?): Boolean {
         val mainId = mainLogicServerId()
         val ref = if (mainId > 0) {
-            NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.logic, mainId)
+            NacosService.getActorRefByNodeKindAndNodeId(NodeKind.logic, mainId)
         } else {
             null
-        } ?: NodeRegister.getRandomActorRefByNodeKind(NodeKind.logic)
+        } ?: NacosService.getRandomActorRefByNodeKind(NodeKind.logic)
 
         if (ref == null) {
             logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.msgId} mainId=$mainId" }
@@ -72,8 +72,8 @@ object MessageRouterService {
             BattleInfoService.getOneBattleIdToBattleServerId(it)
         }
         val ref = battleServerId?.let {
-            NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.battle, it)
-        } ?: NodeRegister.getRandomActorRefByNodeKind(NodeKind.battle)
+            NacosService.getActorRefByNodeKindAndNodeId(NodeKind.battle, it)
+        } ?: NacosService.getRandomActorRefByNodeKind(NodeKind.battle)
 
         return if (ref != null) {
             ref.tell(msg, sender)
@@ -87,7 +87,7 @@ object MessageRouterService {
         val userId = msg.userId
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
         val chatServerId = battleId?.let { BattleInfoService.getOneBattleIdToChatServerId(it) }
-        val ref = chatServerId?.let { NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.chat, chatServerId) }
+        val ref = chatServerId?.let { NacosService.getActorRefByNodeKindAndNodeId(NodeKind.chat, chatServerId) }
         return if (ref != null) {
             ref.tell(msg, sender)
             true
@@ -109,7 +109,7 @@ object MessageRouterService {
     }
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         if (ref != null) {
             ref.tell(msg, sender)
         } else {
@@ -118,25 +118,25 @@ object MessageRouterService {
     }
 
     suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
     suspend fun sendRemoteToLogic(msg: RemoteMessage, logicServerId: Int): Boolean {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.logic, logicServerId) ?: return false
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.logic, logicServerId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
     suspend fun sendRemoteToBattle(msg: RemoteMessage, battleServerId: Int): Boolean {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.battle, battleServerId) ?: return false
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.battle, battleServerId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
     suspend fun sendRemoteToChat(msg: RemoteMessage, chatServerId: Int): Boolean {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.chat, chatServerId) ?: return false
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.chat, chatServerId) ?: return false
         ref.tell(msg, null)
         return true
     }

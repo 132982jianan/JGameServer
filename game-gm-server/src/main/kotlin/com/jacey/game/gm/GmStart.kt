@@ -4,7 +4,7 @@ import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.ktor.Http
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.constants.CookieConstant
 import com.jacey.game.db.service.GmUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -28,10 +28,10 @@ object GmStart {
     data class ResultVO(val code: Int, val msg: String, val data: String? = null)
 
     suspend fun startBusiness(): Boolean {
-        NodeRegister.subscribe(NodeKind.logic)
-        NodeRegister.subscribe(NodeKind.battle)
-        NodeRegister.subscribe(NodeKind.chat)
-        NodeRegister.subscribe(NodeKind.gateway)
+        NacosService.subscribe(NodeKind.logic)
+        NacosService.subscribe(NodeKind.battle)
+        NacosService.subscribe(NodeKind.chat)
+        NacosService.subscribe(NodeKind.gateway)
         AkkaService.create<GmActor>(NodeKind.gm.actorName)
         seedAdmin()
         startHttp(AppConfig.instance)
@@ -47,7 +47,7 @@ object GmStart {
     }
 
     private fun startHttp(conf: AppConfig) {
-        val ports = NodeRegister.netConf.portOf(NodeKind.gm, NodeRegister.selfId)
+        val ports = NacosService.netConf.portOf(NodeKind.gm, NacosService.selfId)
         val httpPort = if (ports.http > 0) ports.http else 80
         Http.start(httpPort, "") {
             // 原 GmController.gmUserLogin

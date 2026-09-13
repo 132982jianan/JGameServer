@@ -2,7 +2,7 @@ package com.jacey.game.gateway.network
 
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.gateway.service.MessageRouterService
 import com.jacey.game.common.msg.NetMessage
@@ -48,7 +48,7 @@ object NettyServer {
 
     suspend fun start() {
         val conf = AppConfig.instance
-        val ports = NodeRegister.netConf.portOf(NodeKind.gateway, NodeRegister.selfId)
+        val ports = NacosService.netConf.portOf(NodeKind.gateway, NacosService.selfId)
         val tcpPort = ports.tcp
         val wsPort = ports.ws
 
@@ -128,7 +128,7 @@ object NettyServer {
 
             // sessionId 与 gatewayId 绑定（redis）
             BattleInfoService.setOneSessionIdToGatewayId(
-                sessionId, com.jacey.game.common.framework.net.NodeRegister.selfId
+                sessionId, com.jacey.game.common.framework.net.NacosService.selfId
             )
             logger.info { "session attached: sessionId=$sessionId ip=${session.userIp}" }
         }

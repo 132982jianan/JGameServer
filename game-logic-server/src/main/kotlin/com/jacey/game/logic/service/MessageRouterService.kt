@@ -4,7 +4,7 @@ import akka.actor.ActorRef
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.db.redis.SessionIdRedis
@@ -55,7 +55,7 @@ object MessageRouterService {
         userIds: List<Int>,
         sender: ActorRef?
     ): Boolean {
-        val ref = NodeRegister.getRandomActorRefByNodeKind(NodeKind.battle)
+        val ref = NacosService.getRandomActorRefByNodeKind(NodeKind.battle)
         if (ref != null) {
             val battleRoomInfo = RemoteServer.BattleRoomInfo.newBuilder()
                 .setBattleType(battleType)
@@ -75,13 +75,13 @@ object MessageRouterService {
     }
 
     suspend fun sendRemoteToGateway(msg: RemoteMessage, gatewayId: Int): Boolean {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gateway, gatewayId) ?: return false
         ref.tell(msg, null)
         return true
     }
 
     suspend fun sendRemoteToGm(msg: RemoteMessage, sender: ActorRef?) {
-        val ref = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
+        val ref = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         ref?.tell(msg, sender) ?: logger.error { "gm actor not found" }
     }
 }

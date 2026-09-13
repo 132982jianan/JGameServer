@@ -9,7 +9,7 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.LocalServer
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.msg.IMessage
 import kotlinx.coroutines.CoroutineScope
@@ -76,11 +76,11 @@ class BattleServerActor : BaseMessageActor() {
         logger.info { "【正在尝试连接GM服务器....】" }
         val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
             .setServerType(CommonEnum.RemoteServerTypeEnum.ServerTypeBattle)
-            .setServerId(NodeRegister.selfId)
-            .setAkkaPath(NodeRegister.selfInfo.actorPath)
+            .setServerId(NacosService.selfId)
+            .setAkkaPath(NacosService.selfInfo.actorPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
-        val gmRef = NodeRegister.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
+        val gmRef = NacosService.getActorRefByNodeKindAndNodeId(NodeKind.gm, 1)
         gmRef?.tell(RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, request), self())
     }
 

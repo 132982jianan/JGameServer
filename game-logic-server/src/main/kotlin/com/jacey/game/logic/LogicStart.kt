@@ -2,7 +2,7 @@ package com.jacey.game.logic
 
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.logic.service.ActorFactoryService
 import com.jacey.game.logic.service.ActorRefManagerService
 
@@ -14,9 +14,9 @@ object LogicStart {
         val conf = AppConfig.instance
 
         // 订阅其它节点
-        NodeRegister.subscribe(NodeKind.gm)
-        NodeRegister.subscribe(NodeKind.battle)
-        NodeRegister.subscribe(NodeKind.chat)
+        NacosService.subscribe(NodeKind.gm)
+        NacosService.subscribe(NodeKind.battle)
+        NacosService.subscribe(NodeKind.chat)
 
         // 创建 actors
         ActorRefManagerService.logicServerActor = ActorFactoryService.createLogicServerActor()

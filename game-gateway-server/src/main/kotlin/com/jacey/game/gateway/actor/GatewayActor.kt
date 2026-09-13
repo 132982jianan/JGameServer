@@ -3,7 +3,7 @@ package com.jacey.game.gateway.actor
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.net.NodeRegister
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.framework.process.Exit
 import com.jacey.game.common.msg.IMessage
@@ -87,8 +87,8 @@ class GatewayNodeActor : BaseMessageActor() {
         logger.info { "【正在尝试连接GM服务器....】" }
         val serverInfo = RemoteServer.RemoteServerInfo.newBuilder()
             .setServerType(CommonEnum.RemoteServerTypeEnum.ServerTypeGateway)
-            .setServerId(NodeRegister.selfId)
-            .setAkkaPath(NodeRegister.selfInfo.actorPath)
+            .setServerId(NacosService.selfId)
+            .setAkkaPath(NacosService.selfInfo.actorPath)
             .setGatewayConnectPath(AppConfig.instance.gatewayConnectPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)

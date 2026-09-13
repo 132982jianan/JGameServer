@@ -124,7 +124,7 @@ object BattleRooms {
 
 /** 本节点注册信息便捷访问 */
 object NodeSelf {
-    val serverId: Int get() = com.jacey.game.common.framework.net.NodeRegister.selfId
+    val serverId: Int get() = com.jacey.game.common.framework.net.NacosService.selfId
 }
 
 /**
@@ -157,7 +157,7 @@ class BaseBattleActor : BaseMessageActor() {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
             builder
         )
-        val chatRef = com.jacey.game.common.framework.net.NodeRegister.getRandomActorRefByNodeKind(
+        val chatRef = com.jacey.game.common.framework.net.NacosService.getRandomActorRefByNodeKind(
             com.jacey.game.common.framework.net.NodeKind.chat)
         chatRef?.tell(remoteMessage, self())
     }
