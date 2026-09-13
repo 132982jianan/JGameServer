@@ -40,19 +40,22 @@ object MessageRouterService {
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
         val ref = NodeRegister.randomActorRefOf(NodeKind.logic) ?: run {
-            KotlinLogging.logger {}.error { "【转发失败】logic 不可用 rpcNum=${msg.msgId}" }
+            logger.error { "【转发失败】logic 不可用 rpcNum=${msg.msgId}" }
             return false
         }
-        KotlinLogging.logger {}.info { "【转发 logic】rpcNum=${msg.msgId} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        logger.info { "【转发 logic】rpcNum=${msg.msgId} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }
 
     suspend fun forwardToMainLogic(msg: NetMessage, sender: ActorRef?): Boolean {
-        val logger = KotlinLogging.logger {}
         val mainId = mainLogicServerId()
-        val ref = if (mainId > 0) NodeRegister.actorRefOf(NodeKind.logic, mainId) else null
-            ?: NodeRegister.randomActorRefOf(NodeKind.logic)
+        val ref = if (mainId > 0) {
+            NodeRegister.actorRefOf(NodeKind.logic, mainId)
+        } else {
+            null
+        } ?: NodeRegister.randomActorRefOf(NodeKind.logic)
+
         if (ref == null) {
             logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.msgId} mainId=$mainId" }
             return false
@@ -73,7 +76,8 @@ object MessageRouterService {
         } ?: NodeRegister.randomActorRefOf(NodeKind.battle)
 
         return if (ref != null) {
-            ref.tell(msg, sender); true
+            ref.tell(msg, sender)
+            true
         } else {
             false
         }
@@ -85,7 +89,8 @@ object MessageRouterService {
         val chatServerId = battleId?.let { BattleInfoService.getOneBattleIdToChatServerId(it) }
         val ref = chatServerId?.let { NodeRegister.actorRefOf(NodeKind.chat, chatServerId) }
         return if (ref != null) {
-            ref.tell(msg, sender); true
+            ref.tell(msg, sender)
+            true
         } else false
     }
 

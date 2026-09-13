@@ -7,6 +7,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.gateway.service.MessageRouterService
+import com.jacey.game.gateway.service.GatewayZone
 import com.jacey.game.gateway.session.ClientSession
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -46,70 +47,57 @@ class ClientSessionActor(private val clientSession: ClientSession) : BaseMessage
         msg.userId = clientSession.userId
         msg.sessionId = clientSession.sessionId
 
-        when (msg.msgId) {
-            Rpc.RpcNameEnum.Regist_VALUE -> {
-                if (clientSession.userId > 0) {
-                    log.error { "【注册异常】已登录用户不能重复注册 userId=${clientSession.userId}" }
-                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
-                    return
-                }
-                msg.userIp = clientSession.userIp
-                if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
-                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
-                }
-            }
-            Rpc.RpcNameEnum.Login_VALUE -> {
-                if (clientSession.userId > 0) {
-                    log.error { "【登录异常】已登录用户不能重复登录 userId=${clientSession.userId}" }
-                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
-                    return
-                }
-                msg.userIp = clientSession.userIp
-                if (!MessageRouterService.forwardToLogic(msg, responseActor)) {
-                    replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
-                }
-            }
-            Rpc.RpcNameEnum.Match_VALUE, Rpc.RpcNameEnum.CancelMatch_VALUE -> {
-                if (clientSession.userId > 0) {
-                    if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
-                        replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
-                    }
-                } else {
-                    clientSession.close()
-                }
-            }
-            Rpc.RpcNameEnum.GetBattleInfo_VALUE,
-            Rpc.RpcNameEnum.Concede_VALUE,
-            Rpc.RpcNameEnum.PlacePieces_VALUE,
-            Rpc.RpcNameEnum.ReadyToStartGame_VALUE -> {
-                if (clientSession.userId > 0) {
-                    val battleId = BattleInfoService.getBattleUserIdToBattleId(clientSession.userId)
-                    if (battleId != null) {
-                        if (!MessageRouterService.forwardToBattle(msg, responseActor)) {
-                            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
-                        }
-                    } else {
-                        replyError(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE)
-                    }
-                } else {
-                    clientSession.close()
-                }
-            }
-            Rpc.RpcNameEnum.BattleChatText_VALUE, Rpc.RpcNameEnum.JoinChatRoom_VALUE -> {
-                if (clientSession.userId > 0) {
-                    val battleId = BattleInfoService.getBattleUserIdToBattleId(clientSession.userId)
-                    if (battleId != null) {
-                        if (!MessageRouterService.forwardToChat(msg, responseActor)) {
-                            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
-                        }
-                    } else {
-                        replyError(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE)
-                    }
-                }
-            }
-            else -> {
-                log.error { "【netMessage解析异常】not support rpcNum=${msg.msgId}" }
-            }
+        when (GatewayZone.of(msg.msgId)) {
+            GatewayZone.AUTH -> onAuth(msg)
+            GatewayZone.LOGIC -> onLoginRequired(msg) { MessageRouterService.forwardToMainLogic(msg, responseActor) }
+            GatewayZone.BATTLE -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE) { MessageRouterService.forwardToBattle(msg, responseActor) }
+            GatewayZone.CHAT -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE) { MessageRouterService.forwardToChat(msg, responseActor) }
+            // 区间外（含推送号段 20001+）：客户端不可主动请求
+            null -> log.error { "【netMessage解析异常】not support rpcNum=${msg.msgId}" }
+        }
+    }
+
+    /** 认证分区：注册/登录；已登录连接重复认证直接拒绝 */
+    private suspend fun onAuth(msg: NetMessage) {
+        if (clientSession.userId > 0) {
+            log.error { "【认证异常】已登录用户不能重复注册/登录 userId=${clientSession.userId}" }
+            replyError(msg, Rpc.RpcErrorCodeEnum.ServerError_VALUE)
+            return
+        }
+        msg.userIp = clientSession.userIp
+        val forwarded = when (msg.msgId) {
+            Rpc.RpcNameEnum.Regist_VALUE -> MessageRouterService.forwardToMainLogic(msg, responseActor)
+            else -> MessageRouterService.forwardToLogic(msg, responseActor)
+        }
+        if (!forwarded) {
+            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
+        }
+    }
+
+    /** 须登录分区：未登录直接断开（原行为） */
+    private suspend fun onLoginRequired(msg: NetMessage, forward: suspend () -> Boolean) {
+        if (clientSession.userId <= 0) {
+            clientSession.close()
+            return
+        }
+        if (!forward()) {
+            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
+        }
+    }
+
+    /** 须在对战中分区：未登录断开；不在对局回分区错误码 */
+    private suspend fun onBattleRequired(msg: NetMessage, notInBattleCode: Int, forward: suspend () -> Boolean) {
+        if (clientSession.userId <= 0) {
+            clientSession.close()
+            return
+        }
+        val battleId = BattleInfoService.getBattleUserIdToBattleId(clientSession.userId)
+        if (battleId == null) {
+            replyError(msg, notInBattleCode)
+            return
+        }
+        if (!forward()) {
+            replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
         }
     }
 

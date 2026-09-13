@@ -134,7 +134,10 @@ object NodeRegister {
     /** 拉取某类型全部在线节点（若尚未订阅则先同步拉一次） */
     fun nodesOf(kind: NodeKind): List<NodeInfo> {
         val map = directory[kind]
-        if (map != null) return map.values.toList()
+        if (map != null) {
+            return map.values.toList()
+        }
+
         val list = Nacos.naming.selectInstances(kind.name, Nacos.conf.group, true)
             .map {
                 NodeInfo.fromNacos(kind, it)
