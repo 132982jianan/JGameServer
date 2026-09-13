@@ -108,9 +108,11 @@ object BattleRoomActorManagerService {
         }
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
         if (battleId == null) {
+            logger.warn { "【DIAG proxy】UserNotInBattle userId=$userId sessionId=$sessionId msgId=${msg.msgId}" }
             sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE), null)
             return
         }
+        logger.info { "【DIAG proxy】bind sessionId=$sessionId sender=${sender?.path()} msgId=${msg.msgId}" }
         bindSessionIdWithGatewayResponseActorRef(sessionId, sender)
         actionActor.tell(msg, sender)
     }
@@ -128,9 +130,16 @@ object BattleRoomActorManagerService {
     /** 推送消息给某个用户（经 gateway ResponseActor 转发） */
     suspend fun sendNetMsgToOneUser(userId: Int, netMsg: NetMessage) {
         val sessionId = SessionIdRedis.getOneUserIdToSessionId(userId)
-        if (sessionId != null) {
-            getGatewayResponseActor(sessionId)?.tell(netMsg, ActorRef.noSender())
+        if (sessionId == null) {
+            logger.warn { "【DIAG push】no sessionId userId=$userId msgId=${netMsg.msgId}" }
+            return
         }
+        val actor = getGatewayResponseActor(sessionId)
+        if (actor == null) {
+            logger.warn { "【DIAG push】no gateway actor sessionId=$sessionId userId=$userId msgId=${netMsg.msgId}" }
+            return
+        }
+        actor.tell(netMsg, ActorRef.noSender())
     }
 }
 
