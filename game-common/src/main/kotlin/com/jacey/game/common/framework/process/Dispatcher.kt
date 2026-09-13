@@ -2,6 +2,7 @@ package com.jacey.game.common.framework.process
 
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.asCoroutineDispatcher
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -44,5 +45,5 @@ object Dispatcher {
     val Actor: CoroutineDispatcher = createDispatcher("Actor", cpuCore.coerceAtLeast(10), cpuCore * 2)
 
     /** Ktor/IO 混合使用的弹性调度器（虚拟线程池化由协程管理） */
-    val Io: CoroutineDispatcher = kotlinx.coroutines.Dispatchers.Default
+    val Io: CoroutineDispatcher = Dispatchers.Default
 }

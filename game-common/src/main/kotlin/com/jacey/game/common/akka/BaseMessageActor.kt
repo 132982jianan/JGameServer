@@ -1,6 +1,7 @@
 package com.jacey.game.common.akka
 
 import akka.actor.ActorRef
+import akka.actor.Terminated
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.framework.akka.CoroutineActor
 import com.jacey.game.common.msg.IMessage
@@ -35,12 +36,12 @@ abstract class BaseMessageActor : CoroutineActor() {
         handlers[clz] = handler as suspend (Any, ActorRef?) -> Unit
     }
 
-    /** Terminated 处理钩子（子类覆写） */
-    protected open suspend fun onTerminated(t: akka.actor.Terminated) {}
-
+    /*
+    重点!!! 进行消息处理
+     */
     final override suspend fun onMessage(msg: Any, sender: ActorRef?) {
         when (msg) {
-            is akka.actor.Terminated -> onTerminated(msg)
+            is Terminated -> onTerminated(msg)
             is NetMessage -> handleMessage(msg, sender)
             is RemoteMessage -> handleMessage(msg, sender)
             is LocalMessage -> handleMessage(msg, sender)
@@ -49,6 +50,7 @@ abstract class BaseMessageActor : CoroutineActor() {
     }
 
     private suspend fun handleMessage(msg: IMessage, sender: ActorRef?) {
+        // 从工厂找出注册的消息进行处理
         val handler = handlers[msg::class.java]
         if (handler != null) {
             try {
@@ -58,23 +60,28 @@ abstract class BaseMessageActor : CoroutineActor() {
                     // 因为现在是采用抛出异常方式，因此这里进行错误处理
                     is NetMessage -> sendErrorToClient(msg, e.errorCode, sender)
                     is RemoteMessage -> sendErrorToRemoteServer(msg, e.errorCode, sender)
-                    else -> log.error(e) { "RpcErrorException on local msg rpcNum=${msg.rpcNum}" }
+                    else -> log.error(e) { "RpcErrorException on local msg rpcNum=${msg.msgId}" }
                 }
             } catch (e: Exception) {
-                log.error(e) { "handle msg fail, rpcNum=${msg.rpcNum}" }
+                log.error(e) { "handle msg fail, rpcNum=${msg.msgId}" }
             }
         } else {
-            log.error { "no handler for ${msg::class.simpleName} rpcNum=${msg.rpcNum}" }
+            log.error { "no handler for ${msg::class.simpleName} rpcNum=${msg.msgId}" }
         }
     }
 
+    /** Terminated 处理钩子（子类覆写） */
+    protected open suspend fun onTerminated(terminated: Terminated) {
+
+    }
+
     protected fun sendErrorToClient(netMessage: NetMessage, errorCode: Int, sender: ActorRef?) {
-        val resp = NetMessage(netMessage.rpcNum, errorCode)
+        val resp = NetMessage(netMessage.msgId, errorCode)
         sender?.tell(resp, ActorRef.noSender())
     }
 
     protected fun sendErrorToRemoteServer(remoteMessage: RemoteMessage, errorCode: Int, sender: ActorRef?) {
-        val resp = RemoteMessage(remoteMessage.rpcNum, errorCode)
+        val resp = RemoteMessage(remoteMessage.msgId, errorCode)
         sender?.tell(resp, self())
     }
 
@@ -94,7 +101,7 @@ fun scheduleMsg(
     initialDelayMs: Long,
     intervalMs: Long,
 ): kotlinx.coroutines.Job {
-    return scope.launch(CoroutineName("schedule-${msg.rpcNum}")) {
+    return scope.launch(CoroutineName("schedule-${msg.msgId}")) {
         kotlinx.coroutines.delay(initialDelayMs)
         while (isActive) {
             actor.tell(msg, ActorRef.noSender())

@@ -32,7 +32,7 @@ class MatchActor : BaseMessageActor() {
 
     init {
         registerHandler(LocalMessage::class.java) { msg, _ ->
-            when (msg.rpcNum) {
+            when (msg.msgId) {
                 LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE -> MatchService.doMatch()
             }
         }
@@ -42,16 +42,16 @@ class MatchActor : BaseMessageActor() {
 
     /** 客户端匹配/取消匹配请求 */
     private suspend fun onNet(msg: NetMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             Rpc.RpcNameEnum.Match_VALUE -> {
                 val request = msg.getProto<CommonMsg.MatchRequest>() ?: run {
-                    sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
+                    sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
                     return
                 }
                 val ok = MatchService.addMatchPlayer(msg.userId, request.battleType)
                 sender?.tell(
                     NetMessage(
-                        msg.rpcNum,
+                        msg.msgId,
                         if (ok) Rpc.RpcErrorCodeEnum.Ok_VALUE else Rpc.RpcErrorCodeEnum.ServerError_VALUE
                     ),
                     null
@@ -65,7 +65,7 @@ class MatchActor : BaseMessageActor() {
                 val removed = MatchService.removeMatchPlayer(msg.userId, battleType)
                 sender?.tell(
                     NetMessage(
-                        msg.rpcNum,
+                        msg.msgId,
                         if (removed) Rpc.RpcErrorCodeEnum.Ok_VALUE else Rpc.RpcErrorCodeEnum.CancelMatchErrorNotMatching_VALUE
                     ),
                     null
@@ -75,7 +75,7 @@ class MatchActor : BaseMessageActor() {
     }
 
     private suspend fun onBattleCreated(remoteMsg: RemoteMessage) {
-        when (remoteMsg.rpcNum) {
+        when (remoteMsg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE -> {
                 val response = remoteMsg.getProto<RemoteServer.NoticeBattleServerCreateNewBattleResponse>() ?: return
                 val battleRoomInfo = response.battleRoomInfo

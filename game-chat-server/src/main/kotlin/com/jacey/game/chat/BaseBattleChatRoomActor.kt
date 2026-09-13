@@ -18,7 +18,7 @@ class BaseBattleChatRoomActor : BaseMessageActor() {
     }
 
     private suspend fun onNetMessage(msg: NetMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             Rpc.RpcNameEnum.JoinChatRoom_VALUE -> {
                 val response = CommonMsg.JoinChatRoomResponse.newBuilder()
                 sender?.tell(NetMessage(Rpc.RpcNameEnum.JoinChatRoom_VALUE, response), null)
@@ -26,7 +26,7 @@ class BaseBattleChatRoomActor : BaseMessageActor() {
             Rpc.RpcNameEnum.BattleChatText_VALUE -> {
                 val request = msg.getProto<CommonMsg.BattleChatTextSendRequest>()
                 if (request == null) {
-                    sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
+                    sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
                     return
                 }
                 val userId = msg.userId

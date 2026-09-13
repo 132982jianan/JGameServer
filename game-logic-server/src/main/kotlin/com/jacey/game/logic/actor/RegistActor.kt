@@ -60,7 +60,7 @@ class RegistActor : BaseMessageActor() {
     }
 
     private fun sendError(msg: NetMessage, errorCode: Int, sender: ActorRef?) {
-        sender?.tell(NetMessage(msg.rpcNum, errorCode), ActorRef.noSender())
+        sender?.tell(NetMessage(msg.msgId, errorCode), ActorRef.noSender())
     }
 
     /*

@@ -39,7 +39,7 @@ class LogicServerActor : BaseMessageActor() {
         registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
         registerHandler(NetMessage::class.java) { msg, sender ->
             // 顶层分发：按 rpcNum 投递给业务子 actor（原 MessageManager.handleRequest）
-            val targetActorRef = when (msg.rpcNum) {
+            val targetActorRef = when (msg.msgId) {
                 Rpc.RpcNameEnum.Regist_VALUE -> ActorRefManagerService.registActor
                 Rpc.RpcNameEnum.Login_VALUE -> ActorRefManagerService.loginActor
                 Rpc.RpcNameEnum.Match_VALUE,
@@ -51,7 +51,7 @@ class LogicServerActor : BaseMessageActor() {
 
             if (targetActorRef != null) {
                 logger.info {
-                    "【分发】rpcNum=${msg.rpcNum} -> ${
+                    "【分发】rpcNum=${msg.msgId} -> ${
                         targetActorRef.path().name()
                     } sender=${sender?.path() ?: "noSender"}"
                 }
@@ -59,26 +59,26 @@ class LogicServerActor : BaseMessageActor() {
                 // 分发过去
                 targetActorRef.tell(msg, sender)
             } else {
-                logger.error { "【分发失败】无业务 actor 处理 rpcNum=${msg.rpcNum}" }
-                sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), self())
+                logger.error { "【分发失败】无业务 actor 处理 rpcNum=${msg.msgId}" }
+                sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.ServerError_VALUE), self())
             }
         }
     }
 
-    override suspend fun onTerminated(t: Terminated) {
+    override suspend fun onTerminated(terminated: Terminated) {
         MessageRouterService.isConnectedToGm = false
         logger.warn { "【GM服务器连接已断开...】, 开始重连任务, 执行间隔 = 5s" }
         startReconnect()
     }
 
     private suspend fun onLocal(msg: LocalMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE -> registerToGm()
         }
     }
 
     private suspend fun onRemote(msg: RemoteMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
                     MessageRouterService.isConnectedToGm = true

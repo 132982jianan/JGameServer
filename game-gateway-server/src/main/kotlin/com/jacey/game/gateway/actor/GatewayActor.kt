@@ -3,21 +3,16 @@ package com.jacey.game.gateway.actor
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
-import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.msg.IMessage
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.LocalServer
 import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.gateway.MessageRouter
-import com.jacey.game.gateway.Session
-import com.jacey.game.gateway.SessionManager
+import com.jacey.game.gateway.service.MessageRouterService
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -37,23 +32,23 @@ class GatewayNodeActor : BaseMessageActor() {
         registerHandler(NetMessage::class.java) { msg, _ -> onNet(msg) }
     }
 
-    override suspend fun onTerminated(t: akka.actor.Terminated) {
-        MessageRouter.isConnectedToGm = false
+    override suspend fun onTerminated(terminated: akka.actor.Terminated) {
+        MessageRouterService.isConnectedToGm = false
         logger.warn { "GM connection lost, restarting registration task (5s)" }
         startReconnect()
     }
 
     private suspend fun onLocal(msg: LocalMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE -> registerToGm()
         }
     }
 
     private suspend fun onRemote(msg: RemoteMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
-                    MessageRouter.isConnectedToGm = true
+                    MessageRouterService.isConnectedToGm = true
                     logger.info { "【向GM服务器注册成功....】" }
                     stopReconnect()
                 } else {
@@ -64,7 +59,7 @@ class GatewayNodeActor : BaseMessageActor() {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcLogicServerNoticeGatewayForceOfflineClient_VALUE -> {
                 val push = msg.getProto<RemoteServer.LogicServerNoticeGatewayForceOfflineClientPush>()
                 if (push != null) {
-                    MessageRouter.forceOffline(
+                    MessageRouterService.forceOffline(
                         push.sessionId,
                         CommonEnum.ForceOfflineReasonEnum.ForceOfflineSameUserLogin
                     )
@@ -75,7 +70,7 @@ class GatewayNodeActor : BaseMessageActor() {
 
     private suspend fun onNet(msg: NetMessage) {
         // 网关本身不处理客户端 NetMessage（由 ClientSessionActor 处理）；此为兜底
-        logger.warn { "GatewayActor got unexpected NetMessage rpcNum=${msg.rpcNum}" }
+        logger.warn { "GatewayActor got unexpected NetMessage rpcNum=${msg.msgId}" }
     }
 
     private suspend fun registerToGm() {
@@ -87,7 +82,7 @@ class GatewayNodeActor : BaseMessageActor() {
             .setGatewayConnectPath(AppConfig.instance.gatewayConnectPath)
         val request = RemoteServer.RegistServerRequest.newBuilder()
             .setServerInfo(serverInfo)
-        MessageRouter.sendRemoteToGm(
+        MessageRouterService.sendRemoteToGm(
             RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE, request),
             self()
         )
@@ -96,7 +91,7 @@ class GatewayNodeActor : BaseMessageActor() {
     private fun startReconnect() {
         if (reconnectJob == null) {
             val scope = CoroutineScope(com.jacey.game.common.framework.process.Dispatcher.Scheduler)
-            val msg: com.jacey.game.common.msg.IMessage =
+            val msg: IMessage =
                 LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
             reconnectJob = scope.launch {
                 kotlinx.coroutines.delay(0)

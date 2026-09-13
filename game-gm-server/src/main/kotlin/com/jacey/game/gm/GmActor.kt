@@ -15,11 +15,11 @@ class GmActor : BaseMessageActor() {
     }
 
     private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 val request = msg.getProto<RemoteServer.RegistServerRequest>()
                 if (request == null) {
-                    sender?.tell(RemoteMessage(msg.rpcNum, RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcServerError_VALUE), self())
+                    sender?.tell(RemoteMessage(msg.msgId, RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcServerError_VALUE), self())
                     return
                 }
                 // watch 远端节点：断线自动移除注册
@@ -52,8 +52,8 @@ class GmActor : BaseMessageActor() {
         }
     }
 
-    override suspend fun onTerminated(t: akka.actor.Terminated) {
-        GmRegistry.removeActor(t.actor)
-        logger.info { "【节点下线移除】${t.actor.path()}" }
+    override suspend fun onTerminated(terminated: akka.actor.Terminated) {
+        GmRegistry.removeActor(terminated.actor)
+        logger.info { "【节点下线移除】${terminated.actor.path()}" }
     }
 }

@@ -5,8 +5,6 @@ import com.jacey.game.common.proto3.BaseBattle
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.gui.service.SessionService
-import com.jacey.game.gui.service.ViewManagerService
 import com.jacey.game.gui.jframe.BattleFrame
 import com.jacey.game.gui.jframe.HallFrame
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -33,16 +31,16 @@ object MessageRouterService {
 
     /** Netty 线程收到服务器消息后调用：切到协程再分发 */
     fun dispatch(msg: NetMessage) {
-        val handler = handlers[msg.rpcNum]
+        val handler = handlers[msg.msgId]
         if (handler == null) {
-            logger.error { "【消息处理异常】不支持该协议 rpcNum=${msg.rpcNum}" }
+            logger.error { "【消息处理异常】不支持该协议 rpcNum=${msg.msgId}" }
             return
         }
         CoroutineScope(Dispatchers.Default).launch {
             try {
                 handler(msg)
             } catch (e: Exception) {
-                logger.error(e) { "handle msg fail rpcNum=${msg.rpcNum}" }
+                logger.error(e) { "handle msg fail rpcNum=${msg.msgId}" }
             }
         }
     }

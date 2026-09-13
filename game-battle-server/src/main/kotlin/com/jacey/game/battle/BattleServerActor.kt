@@ -8,12 +8,10 @@ import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.LocalServer
 import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.framework.process.Dispatcher
-import com.jacey.game.db.service.BattleInfoService
+import com.jacey.game.common.msg.IMessage
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
@@ -37,20 +35,20 @@ class BattleServerActor : BaseMessageActor() {
         }
     }
 
-    override suspend fun onTerminated(t: akka.actor.Terminated) {
+    override suspend fun onTerminated(terminated: akka.actor.Terminated) {
         MessageRouterB.isConnectedToGm = false
         logger.warn { "【GM服务器连接已断开...】, 开始重连任务, 执行间隔 = 5s" }
         startReconnect()
     }
 
     private suspend fun onLocal(msg: LocalMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE -> registerToGm()
         }
     }
 
     private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
                     MessageRouterB.isConnectedToGm = true
@@ -89,7 +87,7 @@ class BattleServerActor : BaseMessageActor() {
     private fun startReconnect() {
         if (reconnectJob == null) {
             val scope = CoroutineScope(Dispatcher.Scheduler)
-            val msg: com.jacey.game.common.msg.IMessage =
+            val msg: IMessage =
                 LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
             reconnectJob = scope.launch {
                 while (isActive) {

@@ -1,4 +1,4 @@
-package com.jacey.game.gateway
+package com.jacey.game.gateway.service
 
 import akka.actor.ActorRef
 import com.jacey.game.common.framework.net.NodeKind
@@ -7,9 +7,8 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
-import com.jacey.game.common.proto3.RemoteServer
-import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
+import com.jacey.game.gateway.session.SessionManagerService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -17,7 +16,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
  *
  * 原通过 Mongo *LoadBalance 表查 akkaPath 转发，现由 Nacos naming 路由（NodeRegister）。
  */
-object MessageRouter {
+object MessageRouterService {
     private val logger = KotlinLogging.logger {}
 
     /** 是否已连接 GM（注册成功标记，由 GatewayActor 维护） */
@@ -41,10 +40,10 @@ object MessageRouter {
 
     suspend fun forwardToLogic(msg: NetMessage, sender: ActorRef?): Boolean {
         val ref = NodeRegister.randomActorRefOf(NodeKind.logic) ?: run {
-            KotlinLogging.logger {}.error { "【转发失败】logic 不可用 rpcNum=${msg.rpcNum}" }
+            KotlinLogging.logger {}.error { "【转发失败】logic 不可用 rpcNum=${msg.msgId}" }
             return false
         }
-        KotlinLogging.logger {}.info { "【转发 logic】rpcNum=${msg.rpcNum} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        KotlinLogging.logger {}.info { "【转发 logic】rpcNum=${msg.msgId} sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }
@@ -55,10 +54,10 @@ object MessageRouter {
         val ref = if (mainId > 0) NodeRegister.actorRefOf(NodeKind.logic, mainId) else null
             ?: NodeRegister.randomActorRefOf(NodeKind.logic)
         if (ref == null) {
-            logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.rpcNum} mainId=$mainId" }
+            logger.error { "【转发失败】mainLogic 不可用 rpcNum=${msg.msgId} mainId=$mainId" }
             return false
         }
-        logger.info { "【转发 mainLogic】rpcNum=${msg.rpcNum} mainId=$mainId sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
+        logger.info { "【转发 mainLogic】rpcNum=${msg.msgId} mainId=$mainId sender=${sender?.path() ?: "noSender"} -> ${ref.path()}" }
         ref.tell(msg, sender)
         return true
     }
@@ -92,14 +91,14 @@ object MessageRouter {
 
     /** 强制下线推送（logic 通知 gateway 用） */
     fun forceOffline(sessionId: Int, reason: CommonEnum.ForceOfflineReasonEnum) {
-        val channel = SessionManager.channelOf(sessionId) ?: run {
+        val channel = SessionManagerService.channelOf(sessionId) ?: run {
             logger.error { "forceOffline: channel not found, sessionId=$sessionId" }
             return
         }
         val push = CommonMsg.ForceOfflinePush.newBuilder()
             .setForceOfflineReason(reason)
             .build()
-        val session = SessionManager.sessionOf(channel)
+        val session = SessionManagerService.sessionOf(channel)
         session?.write(NetMessage(20001, push))
         channel.close()
     }

@@ -25,7 +25,7 @@ class NetMessageSerializer : Serializer {
         val ipLen = ipBytes?.size ?: 0
         val total = 20 + ipLen + msg.dataLength
         val bb = ByteBuffer.allocate(total)
-        bb.putInt(msg.rpcNum)
+        bb.putInt(msg.msgId)
         bb.putInt(msg.errorCode)
         bb.putInt(msg.sessionId)
         bb.putInt(msg.userId)
@@ -38,7 +38,7 @@ class NetMessageSerializer : Serializer {
     override fun fromBinary(bytes: ByteArray): Any {
         val msg = NetMessage()
         val bb = ByteBuffer.wrap(bytes)
-        msg.rpcNum = bb.int
+        msg.msgId = bb.int
         msg.errorCode = bb.int
         msg.sessionId = bb.int
         msg.userId = bb.int
@@ -64,7 +64,7 @@ class RemoteMessageSerializer : Serializer {
     override fun toBinary(o: Any): ByteArray {
         val msg = o as RemoteMessage
         val bb = ByteBuffer.allocate(8 + msg.dataLength)
-        bb.putInt(msg.rpcNum)
+        bb.putInt(msg.msgId)
         bb.putInt(msg.errorCode)
         msg.data?.let { bb.put(it) }
         return bb.array()
@@ -73,7 +73,7 @@ class RemoteMessageSerializer : Serializer {
     override fun fromBinary(bytes: ByteArray): Any {
         val msg = RemoteMessage()
         val bb = ByteBuffer.wrap(bytes)
-        msg.rpcNum = bb.int
+        msg.msgId = bb.int
         msg.errorCode = bb.int
         val data = ByteArray(bytes.size - 8)
         bb.get(data)

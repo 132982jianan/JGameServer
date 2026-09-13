@@ -3,9 +3,9 @@ package com.jacey.game.gateway.network
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.proto3.CommonEnum
-import com.jacey.game.gateway.MessageRouter
+import com.jacey.game.gateway.service.MessageRouterService
 import com.jacey.game.common.msg.NetMessage
-import com.jacey.game.gateway.SessionManager
+import com.jacey.game.gateway.session.SessionManagerService
 import com.jacey.game.gateway.actor.ClientSessionActor
 import com.jacey.game.common.framework.akka.AkkaService
 import io.netty.bootstrap.ServerBootstrap
@@ -33,6 +33,7 @@ import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.gateway.session.Session
 
 /**
  * Netty 服务器（object 单例）
@@ -99,9 +100,9 @@ object NettyServer {
         override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
             when (msg) {
                 is NetMessage -> {
-                    val session = SessionManager.sessionOf(ctx.channel())
+                    val session = SessionManagerService.sessionOf(ctx.channel())
                     if (session == null) {
-                        logger.warn { "no session bound, drop msg rpcNum=${msg.rpcNum}" }
+                        logger.warn { "no session bound, drop msg rpcNum=${msg.msgId}" }
                         return
                     }
                     // 每个连接只创建一次 session actor（channel attribute 缓存）
@@ -127,18 +128,18 @@ object NettyServer {
 
         override fun channelInactive(ctx: ChannelHandlerContext) {
             val channel = ctx.channel()
-            val session = SessionManager.remove(channel)
-            val sessionId = SessionManager.sessionIdOf(channel)
+            val session = SessionManagerService.remove(channel)
+            val sessionId = SessionManagerService.sessionIdOf(channel)
             if (session != null && sessionId != null) {
                 // 断线处理含挂起 Redis/远端通知，异步调度，不阻塞 netty event loop
                 CoroutineScope(Dispatcher.Actor).launch {
-                    SessionManager.removeSession(sessionId)
+                    SessionManagerService.removeSession(sessionId)
                 }
             }
             ctx.fireChannelInactive()
         }
 
-        protected open fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
+        protected open fun actorOf(session: Session): akka.actor.ActorRef =
             AkkaService.system.actorOf(
                 akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
                 "client-" + session.channel.id().asShortText()
@@ -185,7 +186,7 @@ object NettyServer {
             return NetMessage(rpcNum, bytes).also { it.errorCode = errorCode }
         }
 
-        override fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
+        override fun actorOf(session: Session): akka.actor.ActorRef =
             AkkaService.system.actorOf(
                 akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
                 "ws-" + session.channel.id().asShortText()
@@ -256,17 +257,17 @@ object NettyServer {
     private fun onChannelActive(ctx: ChannelHandlerContext) = kotlinx.coroutines.GlobalScope.launch {
         val ctxInternal = ctx
         val channel = ctxInternal.channel()
-        if (!MessageRouter.isAvailableForClient()) {
+        if (!MessageRouterService.isAvailableForClient()) {
             val push = com.jacey.game.common.proto3.CommonMsg.ForceOfflinePush.newBuilder()
                 .setForceOfflineReason(CommonEnum.ForceOfflineReasonEnum.ForceOfflineServerNotAvailable)
                 .build()
-            val session = com.jacey.game.gateway.Session(channel)
+            val session = Session(channel)
             session.write(NetMessage(20001, push))
             channel.close()
             return@launch
         }
-        val sessionId = SessionManager.newSessionId()
-        val session = SessionManager.attach(channel, sessionId)
+        val sessionId = SessionManagerService.newSessionId()
+        val session = SessionManagerService.attach(channel, sessionId)
         // sessionId 与 gatewayId 绑定（redis）
         com.jacey.game.db.service.BattleInfoService.setOneSessionIdToGatewayId(
             sessionId, com.jacey.game.common.framework.net.NodeRegister.selfId

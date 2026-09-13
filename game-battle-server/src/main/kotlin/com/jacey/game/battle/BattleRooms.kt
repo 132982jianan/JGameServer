@@ -88,12 +88,12 @@ object BattleRooms {
         // 对战操作统一由 BattleActionActor 处理（房间生命周期消息走 LocalMessage/RemoteMessage）
         val actionActor = AkkaRefsB.battleActionActor
         if (actionActor == null) {
-            sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
+            sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
             return
         }
         val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
         if (battleId == null) {
-            sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE), null)
+            sender?.tell(NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE), null)
             return
         }
         addGatewayResponseActor(sessionId, sender)

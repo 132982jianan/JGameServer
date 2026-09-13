@@ -11,6 +11,8 @@ import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.framework.process.Dispatcher
+import com.jacey.game.common.msg.IMessage
+import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -93,19 +95,19 @@ class ChatServerActor : BaseMessageActor() {
         registerHandler(NetMessage::class.java) { msg, sender -> dispatchNetMessage(msg, sender) }
     }
 
-    override suspend fun onTerminated(t: akka.actor.Terminated) {
+    override suspend fun onTerminated(terminated: akka.actor.Terminated) {
         ChatMessageRouter.isConnectedToGm = false
         startReconnect()
     }
 
     private suspend fun onLocal(msg: LocalMessage) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE -> registerToGm()
         }
     }
 
     private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
                     ChatMessageRouter.isConnectedToGm = true
@@ -152,7 +154,7 @@ class ChatServerActor : BaseMessageActor() {
 
     /** 客户端聊天请求分发（原 ChatRoomManagerProxy.onNet / dispatchNetMessage） */
     private suspend fun dispatchNetMessage(msg: NetMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             com.jacey.game.common.proto3.Rpc.RpcNameEnum.JoinChatRoom_VALUE,
             com.jacey.game.common.proto3.Rpc.RpcNameEnum.BattleChatText_VALUE -> {
                 val userId = msg.userId
@@ -161,8 +163,8 @@ class ChatServerActor : BaseMessageActor() {
                 if (chatRoom == null) {
                     sender?.tell(
                         NetMessage(
-                            msg.rpcNum,
-                            com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
+                            msg.msgId,
+                            Rpc.RpcErrorCodeEnum.ServerError_VALUE
                         ),
                         null
                     )
@@ -191,7 +193,7 @@ class ChatServerActor : BaseMessageActor() {
     private fun startReconnect() {
         if (reconnectJob == null) {
             val scope = CoroutineScope(Dispatcher.Scheduler)
-            val msg: com.jacey.game.common.msg.IMessage =
+            val msg: IMessage =
                 LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcRegistToGmServer_VALUE)
             reconnectJob = scope.launch {
                 while (isActive) {

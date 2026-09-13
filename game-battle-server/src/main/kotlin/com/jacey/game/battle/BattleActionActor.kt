@@ -5,12 +5,7 @@ import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.BaseBattle
-import com.jacey.game.common.proto3.CommonEnum
-import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.db.service.BattleInfoService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -29,7 +24,7 @@ class BattleActionActor : BaseMessageActor() {
     }
 
     private suspend fun onNetMessage(msg: NetMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             Rpc.RpcNameEnum.GetBattleInfo_VALUE -> onGetBattleInfo(msg, sender)
             Rpc.RpcNameEnum.PlacePieces_VALUE -> onPlacePieces(msg, sender)
             Rpc.RpcNameEnum.Concede_VALUE -> onConcede(msg, sender)

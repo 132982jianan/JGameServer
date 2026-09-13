@@ -1,8 +1,6 @@
 package com.jacey.game.gm
 
 import akka.actor.ActorRef
-import com.jacey.game.common.akka.BaseMessageActor
-import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.framework.net.NodeKind

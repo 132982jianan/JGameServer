@@ -6,8 +6,8 @@ import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.gateway.MessageRouter
-import com.jacey.game.gateway.Session
+import com.jacey.game.gateway.service.MessageRouterService
+import com.jacey.game.gateway.session.Session
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -42,11 +42,11 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
     }
 
     private suspend fun onNetMessage(msg: NetMessage) {
-        log.info { "【客户端消息】sessionId=${session.sessionId} rpcNum=${msg.rpcNum} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
+        log.info { "【客户端消息】sessionId=${session.sessionId} rpcNum=${msg.msgId} errorCode=${msg.errorCode} bodyBytes=${msg.dataLength}" }
         msg.userId = session.userId
         msg.sessionId = session.sessionId
 
-        when (msg.rpcNum) {
+        when (msg.msgId) {
             Rpc.RpcNameEnum.Regist_VALUE -> {
                 if (session.userId > 0) {
                     log.error { "【注册异常】已登录用户不能重复注册 userId=${session.userId}" }
@@ -54,7 +54,7 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                     return
                 }
                 msg.userIp = session.userIp
-                if (!MessageRouter.forwardToMainLogic(msg, responseActor)) {
+                if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
@@ -65,13 +65,13 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                     return
                 }
                 msg.userIp = session.userIp
-                if (!MessageRouter.forwardToLogic(msg, responseActor)) {
+                if (!MessageRouterService.forwardToLogic(msg, responseActor)) {
                     replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                 }
             }
             Rpc.RpcNameEnum.Match_VALUE, Rpc.RpcNameEnum.CancelMatch_VALUE -> {
                 if (session.userId > 0) {
-                    if (!MessageRouter.forwardToMainLogic(msg, responseActor)) {
+                    if (!MessageRouterService.forwardToMainLogic(msg, responseActor)) {
                         replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                     }
                 } else {
@@ -85,7 +85,7 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                 if (session.userId > 0) {
                     val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
                     if (battleId != null) {
-                        if (!MessageRouter.forwardToBattle(msg, responseActor)) {
+                        if (!MessageRouterService.forwardToBattle(msg, responseActor)) {
                             replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                         }
                     } else {
@@ -99,7 +99,7 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                 if (session.userId > 0) {
                     val battleId = BattleInfoService.getBattleUserIdToBattleId(session.userId)
                     if (battleId != null) {
-                        if (!MessageRouter.forwardToChat(msg, responseActor)) {
+                        if (!MessageRouterService.forwardToChat(msg, responseActor)) {
                             replyError(msg, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
                         }
                     } else {
@@ -108,14 +108,14 @@ class ClientSessionActor(private val session: Session) : BaseMessageActor() {
                 }
             }
             else -> {
-                log.error { "【netMessage解析异常】not support rpcNum=${msg.rpcNum}" }
+                log.error { "【netMessage解析异常】not support rpcNum=${msg.msgId}" }
             }
         }
     }
 
     /** 错误响应直达客户端：写 netty channel，不做任何 actor 间转发（杜绝回环） */
     private fun replyError(msg: NetMessage, errorCode: Int) {
-        session.write(NetMessage(msg.rpcNum, errorCode))
+        session.write(NetMessage(msg.msgId, errorCode))
     }
 }
 
@@ -132,7 +132,7 @@ class GatewayResponseActor(private val session: Session) : BaseMessageActor() {
 
     init {
         registerHandler(NetMessage::class.java) { msg, _ ->
-            if (msg.rpcNum == Rpc.RpcNameEnum.Login_VALUE &&
+            if (msg.msgId == Rpc.RpcNameEnum.Login_VALUE &&
                 msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE
             ) {
                 session.userId = msg.userId

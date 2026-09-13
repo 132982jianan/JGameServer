@@ -51,7 +51,7 @@ class CoroutineActorTest {
         val reply = withTimeout(3000) {
             actor.askAwait(NetMessage(1, byteArrayOf(1)))
         }
-        assertEquals(1, (reply as NetMessage).rpcNum)
+        assertEquals(1, (reply as NetMessage).msgId)
         // 验证非阻塞：等待期间线程换过（挂起恢复可能在同一线程，此处仅验证能恢复）
         assertEquals(Thread.currentThread(), startThread)
 
