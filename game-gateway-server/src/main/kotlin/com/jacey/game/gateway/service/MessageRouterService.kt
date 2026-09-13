@@ -7,7 +7,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.gateway.session.SessionManagerService
+import com.jacey.game.gateway.session.ClientSessionManagerService
 import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
@@ -87,14 +87,14 @@ object MessageRouterService {
 
     /** 强制下线推送（logic 通知 gateway 用） */
     fun forceOffline(sessionId: Int, reason: CommonEnum.ForceOfflineReasonEnum) {
-        val channel = SessionManagerService.channelOf(sessionId) ?: run {
+        val channel = ClientSessionManagerService.channelOf(sessionId) ?: run {
             logger.error { "forceOffline: channel not found, sessionId=$sessionId" }
             return
         }
         val push = CommonMsg.ForceOfflinePush.newBuilder()
             .setForceOfflineReason(reason)
             .build()
-        val session = SessionManagerService.sessionOf(channel)
+        val session = ClientSessionManagerService.sessionOf(channel)
         session?.write(NetMessage(20001, push))
         channel.close()
     }

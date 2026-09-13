@@ -7,7 +7,7 @@ import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.gateway.service.MessageRouterService
-import com.jacey.game.gateway.service.GatewayZone
+import com.jacey.game.gateway.service.EGatewayZone
 import com.jacey.game.gateway.session.ClientSession
 import io.github.oshai.kotlinlogging.KotlinLogging
 
@@ -47,11 +47,11 @@ class ClientSessionActor(private val clientSession: ClientSession) : BaseMessage
         msg.userId = clientSession.userId
         msg.sessionId = clientSession.sessionId
 
-        when (GatewayZone.of(msg.msgId)) {
-            GatewayZone.AUTH -> onAuth(msg)
-            GatewayZone.LOGIC -> onLoginRequired(msg) { MessageRouterService.forwardToMainLogic(msg, responseActor) }
-            GatewayZone.BATTLE -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE) { MessageRouterService.forwardToBattle(msg, responseActor) }
-            GatewayZone.CHAT -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE) { MessageRouterService.forwardToChat(msg, responseActor) }
+        when (EGatewayZone.calEGatewayZoneByMsgId(msg.msgId)) {
+            EGatewayZone.AUTH -> onAuth(msg)
+            EGatewayZone.LOGIC -> onLoginRequired(msg) { MessageRouterService.forwardToMainLogic(msg, responseActor) }
+            EGatewayZone.BATTLE -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE) { MessageRouterService.forwardToBattle(msg, responseActor) }
+            EGatewayZone.CHAT -> onBattleRequired(msg, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE) { MessageRouterService.forwardToChat(msg, responseActor) }
             // 区间外（含推送号段 20001+）：客户端不可主动请求
             null -> log.error { "【netMessage解析异常】not support rpcNum=${msg.msgId}" }
         }

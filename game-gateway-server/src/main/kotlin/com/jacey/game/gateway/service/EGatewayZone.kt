@@ -11,13 +11,15 @@ package com.jacey.game.gateway.service
  * 新增系统时按号段归入既有分区，或扩展新分区枚举；区间外
  * （含服务器推送号段 20001+）一律不受理客户端请求。
  */
-enum class GatewayZone(val range: IntRange) {
+enum class EGatewayZone(val range: IntRange) {
     AUTH(100..109),
     LOGIC(110..199),
     BATTLE(6000..6999),
     CHAT(10001..14000);
 
     companion object {
-        fun of(msgId: Int): GatewayZone? = values().firstOrNull { msgId in it.range }
+        fun calEGatewayZoneByMsgId(msgId: Int): EGatewayZone? {
+            return entries.firstOrNull { msgId in it.range }
+        }
     }
 }

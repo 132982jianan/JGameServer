@@ -1,4 +1,4 @@
-package com.jacey.game.gateway.network
+package com.jacey.game.gateway.netty
 
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
@@ -7,7 +7,7 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.gateway.service.MessageRouterService
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.db.service.BattleInfoService
-import com.jacey.game.gateway.session.SessionManagerService
+import com.jacey.game.gateway.session.ClientSessionManagerService
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInitializer
@@ -48,7 +48,7 @@ object NettyServer {
 
     suspend fun start() {
         val conf = AppConfig.instance
-        val ports = NacosService.netConfig.portOf(NodeKind.gateway, NacosService.selfNodeId)
+        val ports = NacosService.netConfig.calNodePortByNodeKindAndNodeId(NodeKind.gateway, NacosService.selfNodeId)
         val tcpPort = ports.tcp
         val wsPort = ports.ws
 
@@ -123,8 +123,8 @@ object NettyServer {
                 channel.close()
                 return@launch
             }
-            val sessionId = SessionManagerService.newSessionId()
-            val session = SessionManagerService.attach(channel, sessionId)
+            val sessionId = ClientSessionManagerService.newSessionId()
+            val session = ClientSessionManagerService.attach(channel, sessionId)
 
             // sessionId 与 gatewayId 绑定（redis）
             BattleInfoService.setOneSessionIdToGatewayId(

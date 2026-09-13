@@ -1,4 +1,4 @@
-package com.jacey.game.gateway.network
+package com.jacey.game.gateway.netty
 
 import com.jacey.game.common.msg.NetMessage
 import io.netty.buffer.ByteBuf

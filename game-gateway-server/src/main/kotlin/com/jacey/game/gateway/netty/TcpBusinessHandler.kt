@@ -1,4 +1,4 @@
-package com.jacey.game.gateway.network
+package com.jacey.game.gateway.netty
 
 import io.netty.channel.ChannelHandlerContext
 

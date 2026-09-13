@@ -12,14 +12,14 @@ class GatewayZoneTest {
 
     @Test
     fun `认证消息落入 AUTH 分区`() {
-        assertEquals(GatewayZone.AUTH, GatewayZone.of(Rpc.RpcNameEnum.Regist_VALUE))
-        assertEquals(GatewayZone.AUTH, GatewayZone.of(Rpc.RpcNameEnum.Login_VALUE))
+        assertEquals(EGatewayZone.AUTH, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.Regist_VALUE))
+        assertEquals(EGatewayZone.AUTH, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.Login_VALUE))
     }
 
     @Test
     fun `逻辑消息落入 LOGIC 分区`() {
-        assertEquals(GatewayZone.LOGIC, GatewayZone.of(Rpc.RpcNameEnum.Match_VALUE))
-        assertEquals(GatewayZone.LOGIC, GatewayZone.of(Rpc.RpcNameEnum.CancelMatch_VALUE))
+        assertEquals(EGatewayZone.LOGIC, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.Match_VALUE))
+        assertEquals(EGatewayZone.LOGIC, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.CancelMatch_VALUE))
     }
 
     @Test
@@ -30,14 +30,14 @@ class GatewayZoneTest {
             Rpc.RpcNameEnum.PlacePieces_VALUE,
             Rpc.RpcNameEnum.ReadyToStartGame_VALUE,
         ).forEach { id ->
-            assertEquals(GatewayZone.BATTLE, GatewayZone.of(id), "rpcNum=$id 应为 BATTLE")
+            assertEquals(EGatewayZone.BATTLE, EGatewayZone.calEGatewayZoneByMsgId(id), "rpcNum=$id 应为 BATTLE")
         }
     }
 
     @Test
     fun `聊天消息落入 CHAT 分区`() {
-        assertEquals(GatewayZone.CHAT, GatewayZone.of(Rpc.RpcNameEnum.JoinChatRoom_VALUE))
-        assertEquals(GatewayZone.CHAT, GatewayZone.of(Rpc.RpcNameEnum.BattleChatText_VALUE))
+        assertEquals(EGatewayZone.CHAT, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.JoinChatRoom_VALUE))
+        assertEquals(EGatewayZone.CHAT, EGatewayZone.calEGatewayZoneByMsgId(Rpc.RpcNameEnum.BattleChatText_VALUE))
     }
 
     @Test
@@ -49,23 +49,23 @@ class GatewayZoneTest {
             Rpc.RpcNameEnum.RpcBattleChatTextPush_VALUE,
             Rpc.RpcNameEnum.NoneRpc_VALUE,
         ).forEach { id ->
-            assertEquals(null, GatewayZone.of(id), "rpcNum=$id 不应有分区")
+            assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(id), "rpcNum=$id 不应有分区")
         }
     }
 
     @Test
     fun `区间边界不重叠不越界`() {
         // 分区下界
-        assertEquals(GatewayZone.AUTH, GatewayZone.of(100))
-        assertEquals(GatewayZone.LOGIC, GatewayZone.of(110))
-        assertEquals(GatewayZone.BATTLE, GatewayZone.of(6000))
-        assertEquals(GatewayZone.CHAT, GatewayZone.of(10001))
+        assertEquals(EGatewayZone.AUTH, EGatewayZone.calEGatewayZoneByMsgId(100))
+        assertEquals(EGatewayZone.LOGIC, EGatewayZone.calEGatewayZoneByMsgId(110))
+        assertEquals(EGatewayZone.BATTLE, EGatewayZone.calEGatewayZoneByMsgId(6000))
+        assertEquals(EGatewayZone.CHAT, EGatewayZone.calEGatewayZoneByMsgId(10001))
         // 分区之间的空洞（区间为闭区间，上界属于本分区）
-        assertEquals(GatewayZone.AUTH, GatewayZone.of(109))
-        assertEquals(null, GatewayZone.of(99))
-        assertEquals(null, GatewayZone.of(200))
-        assertEquals(null, GatewayZone.of(5999))
-        assertEquals(null, GatewayZone.of(7000))
-        assertEquals(null, GatewayZone.of(14001))
+        assertEquals(EGatewayZone.AUTH, EGatewayZone.calEGatewayZoneByMsgId(109))
+        assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(99))
+        assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(200))
+        assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(5999))
+        assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(7000))
+        assertEquals(null, EGatewayZone.calEGatewayZoneByMsgId(14001))
     }
 }

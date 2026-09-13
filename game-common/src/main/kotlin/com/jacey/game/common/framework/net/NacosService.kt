@@ -49,7 +49,7 @@ object NacosService {
     ): Boolean {
         netConfig = ConfigLoader.load<NetConfig>() ?: return false
 
-        val ports = netConfig.portOf(kind, requestedId ?: 1)
+        val ports = netConfig.calNodePortByNodeKindAndNodeId(kind, requestedId ?: 1)
         val host = netConfig.privateIp.resolve()
         val id = try {
             requestedId ?: getNextInstanceIdByNodeKind(kind)
@@ -57,7 +57,7 @@ object NacosService {
             logger.error(e) { "auto id allocation fail (nacos unreachable?)" }
             return false
         }
-        val finalPorts = netConfig.portOf(kind, id)
+        val finalPorts = netConfig.calNodePortByNodeKindAndNodeId(kind, id)
 
         selfNodeInfo = NodeInfo(
             kind = kind,

@@ -1,4 +1,4 @@
-package com.jacey.game.gateway.network
+package com.jacey.game.gateway.netty
 
 import akka.actor.ActorRef
 import akka.actor.Props
@@ -7,7 +7,7 @@ import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.gateway.actor.ClientSessionActor
 import com.jacey.game.gateway.session.ClientSession
-import com.jacey.game.gateway.session.SessionManagerService
+import com.jacey.game.gateway.session.ClientSessionManagerService
 import io.github.oshai.kotlinlogging.KotlinLogging
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
@@ -22,12 +22,12 @@ abstract class AbsBusinessHandler : ChannelInboundHandlerAdapter() {
 
     override fun channelInactive(ctx: ChannelHandlerContext) {
         val channel = ctx.channel()
-        val session = SessionManagerService.remove(channel)
-        val sessionId = SessionManagerService.sessionIdOf(channel)
+        val session = ClientSessionManagerService.remove(channel)
+        val sessionId = ClientSessionManagerService.sessionIdOf(channel)
         if (session != null && sessionId != null) {
             // 断线处理含挂起 Redis/远端通知，异步调度，不阻塞 netty event loop
             CoroutineScope(Dispatcher.Actor).launch {
-                SessionManagerService.removeSession(sessionId)
+                ClientSessionManagerService.removeSession(sessionId)
             }
         }
         ctx.fireChannelInactive()
@@ -36,7 +36,7 @@ abstract class AbsBusinessHandler : ChannelInboundHandlerAdapter() {
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         when (msg) {
             is NetMessage -> {
-                val session = SessionManagerService.sessionOf(ctx.channel())
+                val session = ClientSessionManagerService.sessionOf(ctx.channel())
                 if (session == null) {
                     logger.warn { "no session bound, drop msg rpcNum=${msg.msgId}" }
                     return

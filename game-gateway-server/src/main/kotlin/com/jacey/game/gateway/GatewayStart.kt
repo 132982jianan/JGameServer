@@ -3,7 +3,7 @@ package com.jacey.game.gateway
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.gateway.actor.GatewayNodeActor
-import com.jacey.game.gateway.network.NettyServer
+import com.jacey.game.gateway.netty.NettyServer
 
 /** 网关业务启动（Nacos 注册与 ActorSystem 已由 CommonStart 完成） */
 object GatewayStart {

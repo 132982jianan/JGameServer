@@ -32,6 +32,7 @@ object GmStart {
         ensureAdmin()
 
         startHttp(AppConfig.instance)
+
         return true
     }
 
@@ -44,7 +45,7 @@ object GmStart {
     }
 
     private fun startHttp(conf: AppConfig) {
-        val ports = NacosService.netConfig.portOf(NodeKind.gm, NacosService.selfNodeId)
+        val ports = NacosService.netConfig.calNodePortByNodeKindAndNodeId(NodeKind.gm, NacosService.selfNodeId)
         val httpPort = if (ports.http > 0) {
             ports.http
         } else {

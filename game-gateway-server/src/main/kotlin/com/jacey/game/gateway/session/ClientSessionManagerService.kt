@@ -17,17 +17,12 @@ import java.util.concurrent.ConcurrentHashMap
  * - channelId -> session
  * - sessionId -> channel（兼容原 OnlineClientManager 索引）
  */
-object SessionManagerService {
+object ClientSessionManagerService {
     private val channelIdToSession = ConcurrentHashMap<Int, ClientSession>()
     private val sessionIdToChannel = ConcurrentHashMap<Int, Channel>()
 
     val NETTY_CHANNEL_TO_SESSION = AttributeKey.valueOf<ClientSession>("nettyChannelToSessionKey")
     val NETTY_CHANNEL_TO_SESSION_ID = AttributeKey.valueOf<Int>("nettyChannelToSessionIdKey")
-
-    val onlineCount: Int
-        get() {
-            return sessionIdToChannel.size
-        }
 
     fun attach(channel: Channel, sessionId: Int): ClientSession {
         val session = ClientSession(channel)

@@ -20,7 +20,7 @@ class ClientSession(val channel: Channel) {
 
     val sessionId: Int
         get() {
-            return SessionManagerService.sessionIdOf(channel) ?: 0
+            return ClientSessionManagerService.sessionIdOf(channel) ?: 0
         }
 
     fun write(msg: NetMessage) {
