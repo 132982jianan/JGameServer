@@ -14,7 +14,6 @@ object LogicStart {
         val conf = AppConfig.instance
 
         // 订阅其它节点
-        NacosService.subscribeByNodeKind(NodeKind.gm)
         NacosService.subscribeByNodeKind(NodeKind.battle)
         NacosService.subscribeByNodeKind(NodeKind.chat)
 

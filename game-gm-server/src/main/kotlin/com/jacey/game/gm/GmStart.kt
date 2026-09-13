@@ -1,7 +1,6 @@
 package com.jacey.game.gm
 
 import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.ktor.Http
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NacosService
@@ -15,10 +14,10 @@ import java.util.UUID
 /**
  * GM HTTP 路由与启动器（原 GmController/ClientController/FilterConfig/RequestInterceptor）
  *
- * 契约不变：
+ * GM 为 HTTP-only 节点（无业务 actor）：
  * - GET /gm/gmUserLogin?gmUserName=&passwordMD5=  → JSON ResultVO，Set-Cookie token
  * - GET /gm/executeGmCmd                          → JSON ResultVO
- * - GET /gateway                                  → text 网关连接地址
+ * - GET /gateway                                  → text 网关连接地址（Nacos 目录）
  */
 object GmStart {
     private val logger = KotlinLogging.logger {}
@@ -28,11 +27,7 @@ object GmStart {
     data class ResultVO(val code: Int, val msg: String, val data: String? = null)
 
     suspend fun startBusiness(): Boolean {
-        NacosService.subscribeByNodeKind(NodeKind.logic)
-        NacosService.subscribeByNodeKind(NodeKind.battle)
-        NacosService.subscribeByNodeKind(NodeKind.chat)
         NacosService.subscribeByNodeKind(NodeKind.gateway)
-        AkkaService.create<GmActor>(NodeKind.gm.actorName)
         seedAdmin()
         startHttp(AppConfig.instance)
         return true
@@ -50,7 +45,6 @@ object GmStart {
         val ports = NacosService.netConfig.portOf(NodeKind.gm, NacosService.selfNodeId)
         val httpPort = if (ports.http > 0) ports.http else 80
         Http.start(httpPort, "") {
-            // 原 GmController.gmUserLogin
             get("/gm/gmUserLogin") {
                 val gmUserName = call.request.queryParameters["gmUserName"]
                 val passwordMD5 = call.request.queryParameters["passwordMD5"]

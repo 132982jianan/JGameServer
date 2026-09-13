@@ -8,9 +8,6 @@ import "common_enum.proto";
 // 服务器间通信协议名
 enum RemoteRpcNameEnum {
   NoneRemote = 0;                      // 由于proto3中enum首位必须是0所以设置该标识字段
-  RemoteRpcNoticeExecuteGmCmd = 400102;               // GM服务器向指定服务器发GM命令
-  RemoteRpcNoticeGmServerTextMsg = 400103;            // 逻辑、战斗、gateway服务器向GM服务器推送文本内容（比如异步回应GM命令执行情况）
-
   RemoteRpcNoticeBattleServerCreateNewBattle = 410101;// 主逻辑服务器在匹配成功后通知指定的战斗服务器创建战场
 
   RemoteRpcNoticeChatServerCreateNewBattleChatRoom = 420101; // 对战服务器在初始化战场成功后通知指定的聊天服务器创建对战聊天室
@@ -25,30 +22,6 @@ enum RemoteRpcErrorCodeEnum {
   RemoteRpcServerError = 1;                           // 远程服务器错误
 }
 
-// 远程服务器信息
-message RemoteServerInfo {
-  RemoteServerTypeEnum serverType = 1;    // 远程服务器类型
-  string akkaPath = 2;            // 用akka进行连接的服务器地址
-  int32 serverId = 3;             // 服务器编号
-}
-
-
-// GM服务器向指定服务器发GM命令（RemoteRpcNoticeExecuteGmCmd = 400102）
-message NoticeExecuteGmCmdRequest {
-  GmCmdTypeEnum cmdType = 1;
-  repeated string params = 2;              // 不同指令所需的操作参数
-}
-message NoticeExecuteGmCmdResponse {
-}
-
-// 逻辑、战斗、gateway服务器向GM服务器推送文本内容（比如异步回应GM命令执行情况）（RemoteRpcNoticeGmServerTextMsg = 400103）
-message NoticeGmServerTextMsgRequest {
-  RemoteServerTypeEnum serverType = 1;
-  int32 serverId = 2;
-  string text = 3;
-}
-message NoticeGmServerTextMsgResponse {
-}
 
 // 一个对战房间的信息
 message BattleRoomInfo {

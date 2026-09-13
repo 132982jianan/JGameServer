@@ -9,7 +9,6 @@ import com.jacey.game.common.framework.net.NacosService
  */
 object BattleStart {
     suspend fun startBusiness(): Boolean {
-        NacosService.subscribeByNodeKind(NodeKind.gm)
         NacosService.subscribeByNodeKind(NodeKind.chat)
         AkkaRefsB.battleServerActor = AkkaService.create<BattleServerActor>(NodeKind.battle.actorName)
         AkkaRefsB.battleActionActor = AkkaService.create<BattleActionActor>("battleActionActor")

@@ -13,6 +13,7 @@ import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.util.DateTimeUtil
 import com.jacey.game.common.framework.akka.AkkaService
+import com.jacey.game.common.framework.akka.RemoteCall
 import com.jacey.game.db.entity.BattleRecordEntity
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.service.BattleRecordService
@@ -144,19 +145,21 @@ class BaseBattleActor : BaseMessageActor() {
         BattleInfoService.initAllBattleCellInfo(battleId, listOf(0, 0, 0, 0, 0, 0, 0, 0, 0))
         BattleInfoService.setOneBattleStartTimestamp(battleId, DateTimeUtil.getCurrentTimestamp())
         BattleInfoService.initOneBattleNotReadyUserIds(battleId, userIds)
-        // 通知聊天服务器创建聊天室
+        // 通知聊天服务器创建聊天室（askAwait：同步写法，挂起等回复，失败则战场初始化失败）
         val chatRoomInfo = RemoteServer.ChatRoomInfo.newBuilder()
             .setChatRoomType(CommonEnum.ChatRoomTypeEnum.TwoPlayerBattleChatRoomType)
             .setBattleId(battleId)
-        val builder = RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest.newBuilder()
+        val request = RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest.newBuilder()
             .setChatRoomInfo(chatRoomInfo)
-        val remoteMessage = RemoteMessage(
-            RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
-            builder
+        val reply = RemoteCall.askRandomAwait(
+            com.jacey.game.common.framework.net.NodeKind.chat,
+            RemoteMessage(RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE, request)
         )
-        val chatRef = com.jacey.game.common.framework.net.NacosService.getRandomActorRefByNodeKind(
-            com.jacey.game.common.framework.net.NodeKind.chat)
-        chatRef?.tell(remoteMessage, self())
+        if (reply == null ||
+            reply.errorCode != RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE
+        ) {
+            log.error { "聊天室创建失败 battleId=$battleId errorCode=${reply?.errorCode}" }
+        }
     }
 
     companion object {
