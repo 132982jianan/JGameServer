@@ -26,7 +26,7 @@ object MessageFactoryService {
         MessageRouterService.register(Rpc.RpcNameEnum.BattleChatText_VALUE) { msg -> MessageRouterService.onBattleChatTextResponse(msg) }
         MessageRouterService.register(23001) { msg -> MessageRouterService.onBattleChatTextPush(msg) } // RpcBattleChatTextPush
         MessageRouterService.register(22001) { msg -> MessageRouterService.onEventMsgListPush(msg) } // RpcBattleEventMsgListPush
-        MessageRouterService.register(20001) { msg -> MessageRouterService.onForceOfflinePush(msg) } // RpcForceOfflinePush
+        MessageRouterService.register(21001) { msg -> MessageRouterService.onMatchResultPush(msg) } // RpcMatchResultPush
         MessageRouterService.register(Rpc.RpcNameEnum.JoinChatRoom_VALUE) { msg -> MessageRouterService.onJoinChatRoomResponse(msg) }
         logger.info { "GUI message handlers registered" }
     }

@@ -30,7 +30,7 @@ class BattleServerActor : BaseMessageActor() {
 
     init {
         registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
-        registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
+        registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
         registerHandler(NetMessage::class.java) { msg, sender ->
             // 客户端对战请求交给房间管理
             BattleRooms.proxyNetMessage(msg, sender)
@@ -49,7 +49,7 @@ class BattleServerActor : BaseMessageActor() {
         }
     }
 
-    private suspend fun onRemote(msg: RemoteMessage) {
+    private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
         when (msg.rpcNum) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
@@ -64,6 +64,12 @@ class BattleServerActor : BaseMessageActor() {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>()
                 BattleRooms.removeGatewayResponseActor(push?.sessionId ?: 0)
+            }
+            RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeBattleServerCreateNewBattle_VALUE -> {
+                val request = msg.getProto<RemoteServer.NoticeBattleServerCreateNewBattleRequest>()
+                if (request != null) {
+                    BattleRooms.createNewBattle(request, sender)
+                }
             }
         }
     }

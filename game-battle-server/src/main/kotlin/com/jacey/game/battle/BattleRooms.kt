@@ -85,24 +85,19 @@ object BattleRooms {
     suspend fun proxyNetMessage(msg: NetMessage, sender: ActorRef?) {
         val userId = msg.userId
         val sessionId = msg.sessionId
-        val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
-        var actor = battleId?.let { getBattleActor(it) }
-        if (actor == null && battleId != null) {
-            // 原负责服务器下线，本服务器接管重建
-            actor = Akka.create<BaseBattleActor>("battle-$battleId")
-            battleIdToBattleActor[battleId] = actor
-            val battleUserIds = BattleInfoService.getOneBattleUserIds(battleId)
-            for (uid in battleUserIds) {
-                BattleInfoService.setBattleUserIdToBattleId(uid, battleId)
-            }
-            BattleInfoService.setOneBattleIdToBattleServerId(battleId, NodeSelf.serverId)
-        }
-        if (actor == null) {
+        // 对战操作统一由 BattleActionActor 处理（房间生命周期消息走 LocalMessage/RemoteMessage）
+        val actionActor = AkkaRefsB.battleActionActor
+        if (actionActor == null) {
             sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.ServerError_VALUE), null)
             return
         }
+        val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
+        if (battleId == null) {
+            sender?.tell(NetMessage(msg.rpcNum, Rpc.RpcErrorCodeEnum.UserNotInBattle_VALUE), null)
+            return
+        }
         addGatewayResponseActor(sessionId, sender)
-        actor.tell(msg, sender)
+        actionActor.tell(msg, sender)
     }
 
     /** 对战结束清理（原 removeBattleActor） */

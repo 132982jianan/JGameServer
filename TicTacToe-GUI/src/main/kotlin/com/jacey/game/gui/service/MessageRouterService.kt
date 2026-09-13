@@ -129,6 +129,23 @@ object MessageRouterService {
         }
     }
 
+    /** 匹配结果推送（原 MatchResultPushActor：匹配成功/失败由主逻辑服推送） */
+    suspend fun onMatchResultPush(msg: NetMessage) {
+        val push = msg.getProto<CommonMsg.MatchResultPush>() ?: return
+        if (push.isSuccess) {
+            logger.info { "【匹配结果推送】匹配成功 battleId=${push.battleId}" }
+            // 请求对局详情（对局界面由 onGetBattleInfoResponse 创建）
+            val builder = BaseBattle.GetBattleInfoRequest.newBuilder()
+            NetService.send(NetMessage(Rpc.RpcNameEnum.GetBattleInfo_VALUE, builder))
+        } else {
+            logger.error { "【匹配结果推送】匹配失败" }
+            swing {
+                ViewManagerService.hallFrame?.matchBtn?.isEnabled = true
+                ViewManagerService.hallFrame?.unmatchBtn?.isEnabled = false
+            }
+        }
+    }
+
     /** 取消匹配响应（原 CancelMatch 响应路径） */
     suspend fun onCancelMatchResponse(msg: NetMessage) {
         if (msg.errorCode == Rpc.RpcErrorCodeEnum.Ok_VALUE) {
