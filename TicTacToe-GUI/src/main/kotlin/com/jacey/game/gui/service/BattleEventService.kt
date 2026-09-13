@@ -1,11 +1,7 @@
 package com.jacey.game.gui.service
 
 import com.jacey.game.common.proto3.BaseBattle
-import com.jacey.game.gui.service.SessionService
-import com.jacey.game.gui.service.ViewManagerService
-import com.jacey.game.gui.jframe.HallFrame
 import io.github.oshai.kotlinlogging.KotlinLogging
-import javax.swing.JOptionPane
 import javax.swing.SwingUtilities
 
 /**
@@ -28,11 +24,9 @@ object BattleEventService {
                     val startTurn = eventMsg.startTurnEvent
                     val currentTurn = startTurn.currentTurnInfo
                     val myUserId = SessionService.userInfo?.userId ?: 0
-                    if (currentTurn.userId == myUserId) {
-                        val username = SessionService.userInfo?.nickname ?: ""
-                        SwingUtilities.invokeLater {
-                            JOptionPane.showMessageDialog(null, "$username Your Round")
-                        }
+                    SwingUtilities.invokeLater {
+                        frame.roundText.text =
+                            if (currentTurn.userId == myUserId) "我方回合" else "对方回合"
                     }
                 }
                 BaseBattle.EventTypeEnum.EventTypeEndTurn_VALUE -> {
@@ -67,22 +61,16 @@ object BattleEventService {
                     val myUserId = SessionService.userInfo?.userId ?: 0
                     val text = when (gameOver.gameOverReasonValue) {
                         BaseBattle.GameOverReasonEnum.GameOverPlayerWin_VALUE ->
-                            if (winnerUserId == myUserId) "WIN" else "FAILURE"
+                            if (winnerUserId == myUserId) "胜利 WIN" else "失败 FAILURE"
                         BaseBattle.GameOverReasonEnum.GameOverPlayerConcede_VALUE ->
-                            if (winnerUserId == myUserId) "WIN，Opponent concede" else "FAILURE，We Concede"
-                        BaseBattle.GameOverReasonEnum.GameOverDraw_VALUE -> "DRAW"
+                            if (winnerUserId == myUserId) "胜利（对方投降）" else "失败（我方投降）"
+                        BaseBattle.GameOverReasonEnum.GameOverDraw_VALUE -> "平局 DRAW"
                         else -> "Unknown cause"
                     }
                     SwingUtilities.invokeLater {
-                        JOptionPane.showMessageDialog(null, text)
-                        ViewManagerService.battleFrame?.dispose()
-                        ViewManagerService.battleFrame = null
-                        SessionService.userInfo?.let {
-                            ViewManagerService.hallFrame = HallFrame(it).also { f -> f.isVisible = true }
-                        }
+                        frame.onGameOver(text)
                     }
                 }
-                else -> logger.error { "【事件处理异常】未知事件类型 EventType=${eventMsg.eventType}" }
             }
         }
     }

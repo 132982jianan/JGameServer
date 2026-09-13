@@ -66,10 +66,15 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
     private val opponentText = JLabel()
     private val piecesText = JTextField()
     val roundText = JTextField("回合未开始")
+    private val resultText = JLabel()
+    private val backHallBtn = JButton("返回大厅")
     private val leftTextArea = JTextArea(10, 22)
     private val inputText = JTextField()
     private val surrenderBtn = JButton("投降")
     private val sendBtn = JButton("发送")
+
+    /** 对局是否已结束（结束后棋盘/投降/聊天停用） */
+    private var isGameOver = false
 
     init {
         UIUtil.frameType()
@@ -157,7 +162,7 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         val west = JPanel(BorderLayout())
         val northStack = JPanel()
         northStack.layout = BoxLayout(northStack, BoxLayout.Y_AXIS)
-        val statusPanel = JPanel(GridLayout(2, 2, 4, 4))
+        val statusPanel = JPanel(GridLayout(3, 2, 4, 4))
         statusPanel.border = BorderFactory.createEmptyBorder(8, 8, 0, 8)
         statusPanel.add(JLabel("你的棋子："))
         piecesText.isEditable = false
@@ -167,15 +172,23 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         roundText.isEditable = false
         roundText.horizontalAlignment = SwingConstants.CENTER
         statusPanel.add(roundText)
+        statusPanel.add(JLabel("对局结果："))
+        resultText.horizontalAlignment = SwingConstants.CENTER
+        statusPanel.add(resultText)
         northStack.add(statusPanel)
-        // 投降按钮：状态面板正下方，与状态信息聚合
+        // 按钮：投降（对局中）/ 返回大厅（对局结束）
         surrenderBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) = onConcede()
         })
-        val surrenderPanel = JPanel()
-        surrenderPanel.border = BorderFactory.createEmptyBorder(4, 8, 0, 8)
-        surrenderPanel.add(surrenderBtn)
-        northStack.add(surrenderPanel)
+        backHallBtn.isVisible = false
+        backHallBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) = onBackHall()
+        })
+        val btnPanel = JPanel()
+        btnPanel.border = BorderFactory.createEmptyBorder(4, 8, 0, 8)
+        btnPanel.add(surrenderBtn)
+        btnPanel.add(backHallBtn)
+        northStack.add(btnPanel)
         west.add(northStack, BorderLayout.NORTH)
 
         leftTextArea.isEditable = false
@@ -192,9 +205,8 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         add(west, BorderLayout.WEST)
     }
 
-    // ============ 交互 ============
-
     private fun onCellClick(index: Int) {
+        if (isGameOver) return
         val req = BaseBattle.PlacePiecesRequest.newBuilder()
             .setIndex(index)
             .setLastEventNum(lastEventNum)
@@ -202,9 +214,29 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
     }
 
     private fun onConcede() {
+        if (isGameOver) return
         logger.info { "投降...." }
         val req = BaseBattle.ConcedeRequest.newBuilder()
         NetService.send(NetMessage(Rpc.RpcNameEnum.Concede_VALUE, req))
+    }
+
+    private fun onBackHall() {
+        dispose()
+        ViewManagerService.battleFrame = null
+        SessionService.userInfo?.let {
+            ViewManagerService.hallFrame = HallFrame(it).also { f -> f.isVisible = true }
+        }
+    }
+
+    /** 对局结束（EDT 调用）：结果上 Label，停用棋盘/投降/聊天，展示返回大厅 */
+    fun onGameOver(result: String) {
+        isGameOver = true
+        roundText.text = "对局结束"
+        resultText.text = result
+        surrenderBtn.isEnabled = false
+        sendBtn.isEnabled = false
+        inputText.isEnabled = false
+        backHallBtn.isVisible = true
     }
 
     private fun onSendChat() {
