@@ -13,7 +13,6 @@ object ChatStart {
         NodeRegister.subscribe(NodeKind.gm)
         NodeRegister.subscribe(NodeKind.battle)
         Akka.create<ChatServerActor>("chatServerActor")
-        Akka.create<ChatRoomManagerProxy>("chatRoomMangerActor")
         return true
     }
 }

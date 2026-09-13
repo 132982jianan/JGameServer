@@ -61,7 +61,6 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
 
     // ============ 组件 ============
     private val playerNameText = JTextField()
-    private val battleIdText = JTextField()
     private val opponentText = JTextField()
     private val piecesText = JTextField()
     val roundText = JTextField("回合未开始")
@@ -99,7 +98,6 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         firstLoadingCellInfo(allBattleCellInfo)
 
         playerNameText.text = myUserInfo?.nickname ?: ""
-        battleIdText.text = opponentUserInfo?.userState?.battleId ?: ""
         opponentText.text = opponentUserInfo?.nickname ?: ""
         piecesText.text = myPiecesStr
 
@@ -124,24 +122,15 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
     private fun buildUi() {
         layout = BorderLayout()
 
-        // 顶部：玩家/对手/投降
-        val top = JPanel(GridLayout(3, 2, 6, 6))
+        // 顶部：玩家/对手
+        val top = JPanel(GridLayout(2, 2, 6, 6))
         top.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
         top.add(JLabel("用户名"))
         playerNameText.isEditable = false
         top.add(playerNameText)
-        top.add(JLabel("BattleId："))
-        battleIdText.isEditable = false
-        top.add(battleIdText)
         top.add(JLabel("对  手："))
         opponentText.isEditable = false
         top.add(opponentText)
-        val surrenderPanel = JPanel()
-        surrenderBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) = onConcede()
-        })
-        surrenderPanel.add(surrenderBtn)
-        top.add(surrenderPanel)
         add(top, BorderLayout.NORTH)
 
         // 中部：棋盘 3x3
@@ -173,6 +162,14 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         roundText.isEditable = false
         roundText.horizontalAlignment = SwingConstants.CENTER
         statusPanel.add(roundText)
+        // 投降按钮（独立一行，随状态面板）
+        surrenderBtn.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(e: MouseEvent?) = onConcede()
+        })
+        val surrenderPanel = JPanel()
+        surrenderPanel.border = BorderFactory.createEmptyBorder(0, 8, 0, 8)
+        surrenderPanel.add(surrenderBtn)
+        west.add(surrenderPanel, BorderLayout.SOUTH)
         west.add(statusPanel, BorderLayout.NORTH)
 
         leftTextArea.isEditable = false

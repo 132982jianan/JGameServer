@@ -89,10 +89,8 @@ class ChatServerActor : BaseMessageActor() {
 
     init {
         registerHandler(LocalMessage::class.java) { msg, _ -> onLocal(msg) }
-        registerHandler(RemoteMessage::class.java) { msg, _ -> onRemote(msg) }
-        registerHandler(NetMessage::class.java) { msg, sender ->
-            ChatRoomManagerProxy.dispatchNetMessage(msg, sender)
-        }
+        registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
+        registerHandler(NetMessage::class.java) { msg, sender -> dispatchNetMessage(msg, sender) }
     }
 
     override suspend fun onTerminated(t: akka.actor.Terminated) {
@@ -106,7 +104,7 @@ class ChatServerActor : BaseMessageActor() {
         }
     }
 
-    private suspend fun onRemote(msg: RemoteMessage) {
+    private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
         when (msg.rpcNum) {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcRegistServer_VALUE -> {
                 if (msg.errorCode == RemoteServer.RemoteRpcErrorCodeEnum.RemoteRpcOk_VALUE) {
@@ -122,6 +120,56 @@ class ChatServerActor : BaseMessageActor() {
             RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE -> {
                 val push = msg.getProto<RemoteServer.GatewayNoticeClientOfflinePush>()
                 ChatRooms.removeGatewayResponseActor(push?.sessionId ?: 0)
+            }
+
+            // battle 通知创建对战聊天室（原 ChatRoomManagerProxy 的远程入口）
+            RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE -> {
+                val request = msg.getProto<RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest>() ?: return
+                val chatRoomInfo = request.chatRoomInfo
+                val battleId = chatRoomInfo.battleId
+                when (chatRoomInfo.chatRoomType.number) {
+                    CommonEnum.ChatRoomTypeEnum.TwoPlayerBattleChatRoomType_VALUE -> {
+                        val actor = com.jacey.game.common.framework.akka.Akka.create<BaseBattleChatRoomActor>(
+                            "chatRoom-$battleId"
+                        )
+                        ChatRooms.addChatRoomActor(battleId, actor)
+                        val response = RemoteServer.NoticeChatServerCreateNewBattleChatRoomResponse.newBuilder()
+                        sender?.tell(
+                            RemoteMessage(
+                                RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
+                                response
+                            ),
+                            ActorRef.noSender()
+                        )
+                        logger.info { "对战聊天室初始化完成 battleId=$battleId" }
+                    }
+
+                    else -> logger.error { "not support chatRoomType=${chatRoomInfo.chatRoomType}" }
+                }
+            }
+        }
+    }
+
+    /** 客户端聊天请求分发（原 ChatRoomManagerProxy.onNet / dispatchNetMessage） */
+    private suspend fun dispatchNetMessage(msg: NetMessage, sender: ActorRef?) {
+        when (msg.rpcNum) {
+            com.jacey.game.common.proto3.Rpc.RpcNameEnum.JoinChatRoom_VALUE,
+            com.jacey.game.common.proto3.Rpc.RpcNameEnum.BattleChatText_VALUE -> {
+                val userId = msg.userId
+                val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
+                val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
+                if (chatRoom == null) {
+                    sender?.tell(
+                        NetMessage(
+                            msg.rpcNum,
+                            com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
+                        ),
+                        null
+                    )
+                    return
+                }
+                ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
+                chatRoom.tell(msg, sender)
             }
         }
     }
@@ -165,85 +213,3 @@ class ChatServerActor : BaseMessageActor() {
     }
 }
 
-/**
- * 聊天室管理（原 ChatRoomMangerActor）：创建聊天室 + 分发聊天请求
- */
-class ChatRoomManagerProxy : BaseMessageActor() {
-
-    init {
-        registerHandler(RemoteMessage::class.java) { msg, sender -> onRemote(msg, sender) }
-        registerHandler(NetMessage::class.java, ::onNet)
-    }
-
-    private suspend fun onRemote(msg: RemoteMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
-            RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE -> {
-                val request = msg.getProto<RemoteServer.NoticeChatServerCreateNewBattleChatRoomRequest>() ?: return
-                val chatRoomInfo = request.chatRoomInfo
-                val battleId = chatRoomInfo.battleId
-                when (chatRoomInfo.chatRoomType.number) {
-                    CommonEnum.ChatRoomTypeEnum.TwoPlayerBattleChatRoomType_VALUE -> {
-                        val actor = com.jacey.game.common.framework.akka.Akka.create<BaseBattleChatRoomActor>(
-                            "chatRoom-$battleId"
-                        )
-                        ChatRooms.addChatRoomActor(battleId, actor)
-                        val response = RemoteServer.NoticeChatServerCreateNewBattleChatRoomResponse.newBuilder()
-                        sender?.tell(
-                            RemoteMessage(
-                                RemoteServer.RemoteRpcNameEnum.RemoteRpcNoticeChatServerCreateNewBattleChatRoom_VALUE,
-                                response
-                            ),
-                            ActorRef.noSender()
-                        )
-                        logger.info { "对战聊天室初始化完成 battleId=$battleId" }
-                    }
-
-                    else -> logger.error { "not support chatRoomType=${chatRoomInfo.chatRoomType}" }
-                }
-            }
-        }
-    }
-
-    private suspend fun onNet(msg: NetMessage, sender: ActorRef?) {
-        when (msg.rpcNum) {
-            com.jacey.game.common.proto3.Rpc.RpcNameEnum.JoinChatRoom_VALUE,
-            com.jacey.game.common.proto3.Rpc.RpcNameEnum.BattleChatText_VALUE -> {
-                val userId = msg.userId
-                val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
-                val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
-                if (chatRoom == null) {
-                    sender?.tell(
-                        NetMessage(
-                            msg.rpcNum,
-                            com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
-                        ), null
-                    )
-                    return
-                }
-                ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
-                chatRoom.tell(msg, sender)
-            }
-        }
-    }
-
-    companion object {
-        /** 由 ChatServerActor 调用的静态分发（挂起版：不阻塞 Actor 线程） */
-        suspend fun dispatchNetMessage(msg: NetMessage, sender: ActorRef?) {
-            val userId = msg.userId
-            val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
-            val chatRoom = battleId?.let { ChatRooms.getChatRoomActor(it) }
-            if (chatRoom != null) {
-                ChatRooms.addGatewayResponseActor(msg.sessionId, sender)
-                chatRoom.tell(msg, sender)
-            } else {
-                sender?.tell(
-                    NetMessage(
-                        msg.rpcNum,
-                        com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.ServerError_VALUE
-                    ),
-                    null
-                )
-            }
-        }
-    }
-}
