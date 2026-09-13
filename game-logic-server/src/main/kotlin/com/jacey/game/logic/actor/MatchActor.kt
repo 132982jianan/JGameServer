@@ -37,6 +37,19 @@ class MatchActor : BaseMessageActor() {
         registerHandler(NetMessage::class.java) { msg, sender -> onNet(msg, sender) }
     }
 
+    override fun preStart() {
+        super.preStart()
+
+        // 每秒给自己发一次匹配计算消息
+        val msg: IMessage = LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE)
+
+        matchJob = CoroutineScope(Dispatcher.Scheduler).launch {
+            while (isActive) {
+                self().tell(msg, ActorRef.noSender())
+                delay(1000)
+            }
+        }
+    }
 
     /** 客户端匹配/取消匹配请求 */
     private suspend fun onNet(msg: NetMessage, sender: ActorRef?) {
@@ -73,17 +86,5 @@ class MatchActor : BaseMessageActor() {
         }
     }
 
-    override fun preStart() {
-        super.preStart()
 
-        // 每秒给自己发一次匹配计算消息
-        val msg: IMessage = LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcLogicServerMatch_VALUE)
-
-        matchJob = CoroutineScope(Dispatcher.Scheduler).launch {
-            while (isActive) {
-                self().tell(msg, ActorRef.noSender())
-                delay(1000)
-            }
-        }
-    }
 }
