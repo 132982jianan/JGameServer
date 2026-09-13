@@ -6,7 +6,6 @@ import akka.actor.Props
 import com.typesafe.config.Config
 import com.typesafe.config.ConfigFactory
 import io.github.oshai.kotlinlogging.KotlinLogging
-import java.io.File
 
 /**
  * Akka 系统管理（单例）
@@ -15,7 +14,7 @@ import java.io.File
  * - create(): 在系统内创建 CoroutineActor 子类的 actor
  * - addressOf(): 生成本节点 artery path（注册到 Nacos metadata 用）
  */
-object Akka {
+object AkkaService {
     private val logger = KotlinLogging.logger {}
     lateinit var system: ActorSystem
         private set
@@ -29,19 +28,25 @@ object Akka {
      * @param hostname    artery canonical hostname（Docker 场景由环境变量注入）
      */
     fun start(kind: String, nodeId: Int, arteryPort: Int, hostname: String, loglevel: String = "INFO"): ActorSystem {
-        val akkaConf = if (arteryPort > 0) remoteConf(hostname, arteryPort, loglevel) else localConf(loglevel)
+        val akkaConf = if (arteryPort > 0) {
+            remoteConf(hostname, arteryPort, loglevel)
+        } else {
+            localConf(loglevel)
+        }
         system = ActorSystem.create("${kind}_$nodeId", akkaConf)
         logger.info { "akka system started: ${system.name()}, artery=$hostname:$arteryPort" }
         return system
     }
 
     /** 创建 CoroutineActor 子类 actor（返回 ActorRef，通信走 askAwait/tell） */
-    inline fun <reified A : CoroutineActor> create(name: String): ActorRef =
-        system.actorOf(Props.create(A::class.java), name)
+    inline fun <reified A : CoroutineActor> create(name: String): ActorRef {
+        return system.actorOf(Props.create(A::class.java), name)
+    }
 
     /** 生成 artery actor path：akka://<sys>@<host>:<port>/user/<name> */
-    fun addressOf(systemName: String, hostname: String, port: Int, actorName: String): String =
-        "akka://$systemName@$hostname:$port/user/$actorName"
+    fun addressOf(systemName: String, hostname: String, port: Int, actorName: String): String {
+        return "akka://$systemName@$hostname:$port/user/$actorName"
+    }
 
     /**
      * remote（artery tcp）配置片段

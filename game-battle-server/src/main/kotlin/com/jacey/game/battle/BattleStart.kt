@@ -1,6 +1,6 @@
 package com.jacey.game.battle
 
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 
@@ -11,8 +11,8 @@ object BattleStart {
     suspend fun startBusiness(): Boolean {
         NodeRegister.subscribe(NodeKind.gm)
         NodeRegister.subscribe(NodeKind.chat)
-        AkkaRefsB.battleServerActor = Akka.create<BattleServerActor>("battleServerActor")
-        AkkaRefsB.battleActionActor = Akka.create<BattleActionActor>("battleActionActor")
+        AkkaRefsB.battleServerActor = AkkaService.create<BattleServerActor>("battleServerActor")
+        AkkaRefsB.battleActionActor = AkkaService.create<BattleActionActor>("battleActionActor")
         return true
     }
 }

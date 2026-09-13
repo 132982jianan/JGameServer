@@ -12,7 +12,7 @@ import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.util.DateTimeUtil
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.db.entity.BattleRecordEntity
 import com.jacey.game.db.service.BattleInfoService
 import com.jacey.game.db.service.BattleRecordService
@@ -56,7 +56,7 @@ object BattleRooms {
                 // 1.标记进行中的对战
                 BattleInfoService.addPlayingBattleId(battleId, CommonEnum.BattleTypeEnum.BattleTypeTwoPlayer)
                 // 2.创建专属 BaseBattleActor
-                val actor = Akka.create<BaseBattleActor>("battle-$battleId")
+                val actor = AkkaService.create<BaseBattleActor>("battle-$battleId")
                 battleIdToBattleActor[battleId] = actor
                 // 3.userId <-> battleId、battleId <-> 本服务器绑定
                 for (userId in userIds) {

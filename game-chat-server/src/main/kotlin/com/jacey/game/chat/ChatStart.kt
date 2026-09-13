@@ -1,7 +1,6 @@
 package com.jacey.game.chat
 
-import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 
@@ -12,7 +11,7 @@ object ChatStart {
     suspend fun startBusiness(): Boolean {
         NodeRegister.subscribe(NodeKind.gm)
         NodeRegister.subscribe(NodeKind.battle)
-        Akka.create<ChatServerActor>("chatServerActor")
+        AkkaService.create<ChatServerActor>("chatServerActor")
         return true
     }
 }

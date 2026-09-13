@@ -1,16 +1,14 @@
 package com.jacey.game.gateway.network
 
 import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.gateway.MessageRouter
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.gateway.SessionManager
 import com.jacey.game.gateway.actor.ClientSessionActor
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.channel.Channel
 import io.netty.channel.ChannelHandlerContext
 import io.netty.channel.ChannelInboundHandlerAdapter
 import io.netty.channel.ChannelInitializer
@@ -27,7 +25,6 @@ import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame
 import io.netty.handler.codec.http.websocketx.PingWebSocketFrame
 import io.netty.handler.codec.http.websocketx.PongWebSocketFrame
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
-import io.netty.handler.codec.http.websocketx.WebSocketFrame
 import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
 import io.netty.handler.timeout.IdleState
 import io.netty.handler.timeout.IdleStateEvent
@@ -142,7 +139,7 @@ object NettyServer {
         }
 
         protected open fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
-            Akka.system.actorOf(
+            AkkaService.system.actorOf(
                 akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
                 "client-" + session.channel.id().asShortText()
             )
@@ -189,7 +186,7 @@ object NettyServer {
         }
 
         override fun actorOf(session: com.jacey.game.gateway.Session): akka.actor.ActorRef =
-            Akka.system.actorOf(
+            AkkaService.system.actorOf(
                 akka.actor.Props.create(ClientSessionActor::class.java) { ClientSessionActor(session) },
                 "ws-" + session.channel.id().asShortText()
             )

@@ -3,8 +3,6 @@ package com.jacey.game.logic
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
-import com.jacey.game.common.akka.BaseMessageActor
-import com.jacey.game.db.redis.SessionIdRedis
 
 /**
  * 系统参数表（原 SystemConfig.xlsx 固化为代码常量，无需配置文件）
@@ -59,11 +57,11 @@ object AkkaRefs {
 /** actor 创建封装（便于 gateway/logic 各自注入子类） */
 object AkkaCreates {
     fun createLogicServerActor() =
-        com.jacey.game.common.framework.akka.Akka.create<com.jacey.game.logic.LogicServerActor>("logicServerActor")
+        com.jacey.game.common.framework.akka.AkkaService.create<com.jacey.game.logic.LogicServerActor>("logicServerActor")
     fun createLoginActor() =
-        com.jacey.game.common.framework.akka.Akka.create<com.jacey.game.logic.LoginActor>("loginActor")
+        com.jacey.game.common.framework.akka.AkkaService.create<com.jacey.game.logic.LoginActor>("loginActor")
     fun createRegistActor() =
-        com.jacey.game.common.framework.akka.Akka.create<com.jacey.game.logic.RegistActor>("registActor")
+        com.jacey.game.common.framework.akka.AkkaService.create<com.jacey.game.logic.RegistActor>("registActor")
     fun createMatchActor() =
-        com.jacey.game.common.framework.akka.Akka.create<com.jacey.game.logic.MatchActor>("matchActor")
+        com.jacey.game.common.framework.akka.AkkaService.create<com.jacey.game.logic.MatchActor>("matchActor")
 }

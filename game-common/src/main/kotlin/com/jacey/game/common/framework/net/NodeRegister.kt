@@ -2,7 +2,7 @@ package com.jacey.game.common.framework.net
 
 import akka.actor.ActorRef
 import com.alibaba.nacos.api.naming.listener.NamingEvent
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.akka.resolveAwait
 import com.jacey.game.common.framework.nacos.ConfigLoader
 import com.jacey.game.common.framework.nacos.Nacos
@@ -85,7 +85,7 @@ object NodeRegister {
 
     /** 启动 actor system（注册成功后调用，端口已确定；loglevel 等来自 Nacos net.yml） */
     fun startActorSystem() {
-        Akka.start(
+        AkkaService.start(
             selfInfo.kind.name, selfInfo.nodeId, selfInfo.arteryPort, selfInfo.arteryHost,
             netConf.akka.loglevel
         )
@@ -155,7 +155,7 @@ object NodeRegister {
         val key = ActorCacheKey(kind, nodeId)
         actorRefs[key]?.let { return it }
         val info = nodeOf(kind, nodeId) ?: return null
-        val selection = Akka.system.actorSelection(info.actorPath)
+        val selection = AkkaService.system.actorSelection(info.actorPath)
         val ref = runCatching { selection.resolveAwait() }.getOrNull() ?: return null
         actorRefs[key] = ref
         return ref

@@ -42,6 +42,8 @@ object CommonStart {
             System.err.println("node register fail")
             return false
         }
+
+        // 启动akka
         NodeRegister.startActorSystem()
 
         // 5. Redis

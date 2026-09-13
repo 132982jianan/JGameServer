@@ -18,6 +18,8 @@ import java.awt.event.MouseEvent
 import java.awt.event.WindowAdapter
 import java.awt.event.WindowEvent
 import javax.swing.BorderFactory
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.JButton
 import javax.swing.JFrame
 import kotlin.system.exitProcess
@@ -60,8 +62,8 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
     val opponentPiecesStr: String
 
     // ============ 组件 ============
-    private val playerNameText = JTextField()
-    private val opponentText = JTextField()
+    private val playerNameText = JLabel()
+    private val opponentText = JLabel()
     private val piecesText = JTextField()
     val roundText = JTextField("回合未开始")
     private val leftTextArea = JTextArea(10, 22)
@@ -97,8 +99,8 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         allBattleCellInfo = battleInfo.battleCellInfoList
         firstLoadingCellInfo(allBattleCellInfo)
 
-        playerNameText.text = myUserInfo?.nickname ?: ""
-        opponentText.text = opponentUserInfo?.nickname ?: ""
+        playerNameText.text = "用户名：${myUserInfo?.nickname ?: ""}"
+        opponentText.text = "对手：${opponentUserInfo?.nickname ?: ""}"
         piecesText.text = myPiecesStr
 
         val notReadyUserIds = battleInfo.notReadyUserIdsList
@@ -113,7 +115,9 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
                 NetService.send(NetMessage(Rpc.RpcNameEnum.ReadyToStartGame_VALUE, builder))
             }
         }
-
+        pack()
+        setLocationRelativeTo(null)
+        UIUtil.init(this)
         ViewManagerService.battleFrame = this
     }
 
@@ -122,14 +126,12 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
     private fun buildUi() {
         layout = BorderLayout()
 
-        // 顶部：玩家/对手
-        val top = JPanel(GridLayout(2, 2, 6, 6))
+        // 顶部：玩家/对手（Label 直接展示，标签与值不分离）
+        val top = JPanel()
+        top.layout = BoxLayout(top, BoxLayout.Y_AXIS)
         top.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
-        top.add(JLabel("用户名"))
-        playerNameText.isEditable = false
         top.add(playerNameText)
-        top.add(JLabel("对  手："))
-        opponentText.isEditable = false
+        top.add(Box.createVerticalStrut(4))
         top.add(opponentText)
         add(top, BorderLayout.NORTH)
 
@@ -137,6 +139,7 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         val board = JPanel(GridLayout(3, 3, 4, 4))
         board.border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
         for (i in 0 until 9) {
+            cellFields[i].preferredSize = Dimension(90, 90)
             cellFields[i].isEditable = false
             cellFields[i].isEnabled = false
             cellFields[i].horizontalAlignment = SwingConstants.CENTER
@@ -150,8 +153,10 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         boardWrap.add(board, BorderLayout.CENTER)
         add(boardWrap, BorderLayout.CENTER)
 
-        // 左侧：回合状态 + 棋子 + 聊天
+        // 左侧：回合状态 + 投降 + 聊天（纵向排列）
         val west = JPanel(BorderLayout())
+        val northStack = JPanel()
+        northStack.layout = BoxLayout(northStack, BoxLayout.Y_AXIS)
         val statusPanel = JPanel(GridLayout(2, 2, 4, 4))
         statusPanel.border = BorderFactory.createEmptyBorder(8, 8, 0, 8)
         statusPanel.add(JLabel("你的棋子："))
@@ -162,15 +167,16 @@ class BattleFrame(battleInfo: BaseBattle.BattleInfo) : JFrame() {
         roundText.isEditable = false
         roundText.horizontalAlignment = SwingConstants.CENTER
         statusPanel.add(roundText)
-        // 投降按钮（独立一行，随状态面板）
+        northStack.add(statusPanel)
+        // 投降按钮：状态面板正下方，与状态信息聚合
         surrenderBtn.addMouseListener(object : MouseAdapter() {
             override fun mouseClicked(e: MouseEvent?) = onConcede()
         })
         val surrenderPanel = JPanel()
-        surrenderPanel.border = BorderFactory.createEmptyBorder(0, 8, 0, 8)
+        surrenderPanel.border = BorderFactory.createEmptyBorder(4, 8, 0, 8)
         surrenderPanel.add(surrenderBtn)
-        west.add(surrenderPanel, BorderLayout.SOUTH)
-        west.add(statusPanel, BorderLayout.NORTH)
+        northStack.add(surrenderPanel)
+        west.add(northStack, BorderLayout.NORTH)
 
         leftTextArea.isEditable = false
         val chatPanel = JPanel(BorderLayout())

@@ -129,7 +129,7 @@ class ChatServerActor : BaseMessageActor() {
                 val battleId = chatRoomInfo.battleId
                 when (chatRoomInfo.chatRoomType.number) {
                     CommonEnum.ChatRoomTypeEnum.TwoPlayerBattleChatRoomType_VALUE -> {
-                        val actor = com.jacey.game.common.framework.akka.Akka.create<BaseBattleChatRoomActor>(
+                        val actor = com.jacey.game.common.framework.akka.AkkaService.create<BaseBattleChatRoomActor>(
                             "chatRoom-$battleId"
                         )
                         ChatRooms.addChatRoomActor(battleId, actor)

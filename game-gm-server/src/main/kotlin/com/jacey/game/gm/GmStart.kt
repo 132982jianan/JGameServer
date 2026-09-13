@@ -1,20 +1,15 @@
 package com.jacey.game.gm
 
 import com.jacey.game.common.framework.config.AppConfig
-import com.jacey.game.common.framework.akka.Akka
+import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.ktor.Http
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.net.NodeRegister
-import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.common.util.MD5Util
 import com.jacey.game.common.constants.CookieConstant
 import com.jacey.game.db.service.GmUserService
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.ktor.server.application.call
-import io.ktor.server.request.header
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
-import io.ktor.server.routing.routing
 import java.util.UUID
 
 /**
@@ -37,7 +32,7 @@ object GmStart {
         NodeRegister.subscribe(NodeKind.battle)
         NodeRegister.subscribe(NodeKind.chat)
         NodeRegister.subscribe(NodeKind.gateway)
-        Akka.create<GmActor>("gmActor")
+        AkkaService.create<GmActor>("gmActor")
         seedAdmin()
         startHttp(AppConfig.instance)
         return true
