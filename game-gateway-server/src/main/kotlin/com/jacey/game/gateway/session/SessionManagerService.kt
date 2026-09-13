@@ -82,52 +82,44 @@ object SessionManagerService {
         // 通知 logic（原 GatewayNoticeClientOfflinePush）
         val logicServerId = BattleInfoService.getOneSessionIdToLogicServerId(sessionId)
         if (logicServerId != null && logicServerId > 0) {
-            val push = RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
-                .setSessionId(sessionId)
-                .setUserId(userId)
-                .setIsUserOffline(isUserOffline)
-                .build()
-            val remoteMsg = RemoteMessage(
-                RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
-                push
-            )
-            val ref = NodeRegister.actorRefOf(
-                NodeKind.logic, logicServerId
-            )
-            ref?.tell(remoteMsg, ActorRef.noSender())
+            noticeClientOffline(NodeKind.logic, logicServerId, sessionId, userId, isUserOffline)
         }
         BattleInfoService.removeOneSessionIdToLogicServerId(sessionId)
 
-        // battle / chat 通知
-        val battleId = BattleInfoService.getBattleUserIdToBattleId(userId)
-        if (battleId != null) {
-            listOf(
-                BattleInfoService.getOneBattleIdToBattleServerId(battleId),
-                BattleInfoService.getOneBattleIdToChatServerId(battleId)
-            ).forEach { serverId ->
-                if (serverId != null && serverId > 0) {
-                    val gatewayNoticeClientOfflinePush = RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
-                        .setSessionId(sessionId)
-                        .setUserId(userId)
-                        .setIsUserOffline(isUserOffline)
-                        .build()
+        // 通知 battle / chat
+        noticeBattleAndChatClientOffline(sessionId, userId, isUserOffline)
+    }
 
-                    // 构建出消息
-                    val remoteMsg = RemoteMessage(
-                        RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
-                        gatewayNoticeClientOfflinePush
-                    )
+    /** 向单个功能节点推送客户端断线通知（logic/battle/chat 通用） */
+    private suspend fun noticeClientOffline(
+        kind: NodeKind,
+        serverId: Int,
+        sessionId: Int,
+        userId: Int,
+        isUserOffline: Boolean,
+    ) {
+        val push = RemoteServer.GatewayNoticeClientOfflinePush.newBuilder()
+            .setSessionId(sessionId)
+            .setUserId(userId)
+            .setIsUserOffline(isUserOffline)
+            .build()
+        val remoteMsg = RemoteMessage(
+            RemoteServer.RemoteRpcNameEnum.RemoteRpcGatewayNoticeClientOfflinePush_VALUE,
+            push
+        )
+        NodeRegister.actorRefOf(kind, serverId)?.tell(remoteMsg, ActorRef.noSender())
+    }
 
-                    val kind = if (serverId == BattleInfoService.getOneBattleIdToBattleServerId(battleId)) {
-                        NodeKind.battle
-                    } else {
-                        NodeKind.chat
-                    }
-
-                    val ref = NodeRegister.actorRefOf(kind, serverId)
-                    ref?.tell(remoteMsg, ActorRef.noSender())
-                }
-            }
+    /** 通知用户当前对局所在的 battle / chat 服务器 */
+    private suspend fun noticeBattleAndChatClientOffline(sessionId: Int, userId: Int, isUserOffline: Boolean) {
+        val battleId = BattleInfoService.getBattleUserIdToBattleId(userId) ?: return
+        val battleServerId = BattleInfoService.getOneBattleIdToBattleServerId(battleId)
+        if (battleServerId != null && battleServerId > 0) {
+            noticeClientOffline(NodeKind.battle, battleServerId, sessionId, userId, isUserOffline)
+        }
+        val chatServerId = BattleInfoService.getOneBattleIdToChatServerId(battleId)
+        if (chatServerId != null && chatServerId > 0) {
+            noticeClientOffline(NodeKind.chat, chatServerId, sessionId, userId, isUserOffline)
         }
     }
 }
