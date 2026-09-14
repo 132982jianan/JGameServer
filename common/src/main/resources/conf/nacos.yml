@@ -1,0 +1,3 @@
+port: 8848
+namespace: public
+group: DEFAULT_GROUP

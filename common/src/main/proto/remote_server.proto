@@ -1,0 +1,73 @@
+syntax = "proto3";
+package com.jacey.game.common.proto3;
+
+option optimize_for = SPEED;
+
+import "common_enum.proto";
+import "common_msg.proto";
+
+// 服务器间通信协议名
+enum RemoteRpcNameEnum {
+  NoneRemote = 0;                      // 由于proto3中enum首位必须是0所以设置该标识字段
+  RemoteRpcNoticeBattleServerCreateNewBattle = 410101;// Global 匹配成功后通知指定 Battle 创建战场
+
+  RemoteRpcGateNoticeClientOfflinePush = 500001;   // Gate 监测到客户端离线后通知 Battle
+  RemoteRpcGlobalPlayerOnline = 510001;    // Lobby 通知 Global 玩家上线
+  RemoteRpcGlobalPlayerOffline = 510002;   // Lobby 通知 Global 玩家下线
+  RemoteRpcGlobalBattleEnded = 510003;     // Battle 通知 Global 清理战局路由和聊天室
+  RemoteRpcGlobalPlayerStateQuery = 510004;// Lobby 登录时向 Global 查询玩家运行态
+}
+
+// 服务器间通信错误码
+enum RemoteRpcErrorCodeEnum {
+  RemoteRpcOk = 0;                                    // 正常
+  RemoteRpcServerError = 1;                           // 远程服务器错误
+}
+
+
+// 一个对战房间的信息
+message BattleRoomInfo {
+  BattleTypeEnum battleType = 1;
+  string battleId = 2;
+  repeated int32 userIds = 3;              // 按行动顺序排列的对战玩家userId
+}
+
+// Global 匹配成功后通知指定的 Battle 创建战场（RemoteRpcNoticeBattleServerCreateNewBattle = 410101）
+message NoticeBattleServerCreateNewBattleRequest {
+  BattleRoomInfo battleRoomInfo = 1;
+}
+message NoticeBattleServerCreateNewBattleResponse {
+  BattleRoomInfo battleRoomInfo = 1;
+}
+
+// ------------------------------ 服务器推送 ------------------------------
+
+// Global 收到 Lobby 下线通知后，通知 Battle 清除旧 GateActorRef（500001）
+message GateNoticeClientOfflinePush {
+  int32 sessionId = 1;
+  int32 userId = 2;               // 如果该session对应的客户端登录成功，需发此字段
+  bool isUserOffline = 3;         // 是否是玩家也要下线（同一账号二次登录导致旧session断开，但对应玩家仍在线）
+}
+
+// Lobby 向 Global 同步玩家上线/下线与查询易失运行态
+message GlobalPlayerOnlineRequest {
+  int32 playerId = 1;
+  string playerName = 2;
+}
+
+message GlobalPlayerOfflineRequest {
+  int32 playerId = 1;
+}
+
+message GlobalBattleEndedRequest {
+  string battleId = 1;
+  repeated int32 playerIds = 2;
+}
+
+message GlobalPlayerStateQueryRequest {
+  int32 playerId = 1;
+}
+
+message GlobalPlayerStateQueryResponse {
+  UserState userState = 1;
+}
