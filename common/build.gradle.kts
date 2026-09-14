@@ -31,7 +31,7 @@ dependencies {
     // Redis：Lettuce 协程 API
     api(libs.lettuce.core)
     implementation(libs.io.netty.netty.all)
-    // HTTP（Ktor），GM 服务器用
+    // HTTP（Ktor），Portal 与 Insight 使用
     api(platform(libs.ktor.bom))
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.netty)

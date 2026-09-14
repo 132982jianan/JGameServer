@@ -33,6 +33,7 @@ object NacosService {
     private val nodeKind2NodeId2NodeInfoMap = ConcurrentHashMap<NodeKind, ConcurrentHashMap<Int, NodeInfo>>()
 
     private val actorCacheKey2ActorRefMap = ConcurrentHashMap<ActorCacheKey, ActorRef>()
+    private lateinit var selfInstance: com.alibaba.nacos.api.naming.pojo.Instance
 
     /**
      * 注册本节点到 Nacos
@@ -42,7 +43,7 @@ object NacosService {
      */
     fun start(
         kind: NodeKind,
-        requestedId: Int?,
+        requestedId: NodeId?,
         actorName: String,
         connectPath: String = "",
     ): Boolean {
@@ -50,7 +51,7 @@ object NacosService {
 
         val host = netConfig.privateIp.resolve()
         val id = try {
-            requestedId ?: getNextInstanceIdByNodeKind(kind)
+            requestedId?.int ?: getNextInstanceIdByNodeKind(kind)
         } catch (e: Exception) {
             logger.error(e) { "auto id allocation fail (nacos unreachable?)" }
             return false
@@ -74,19 +75,40 @@ object NacosService {
             connectPath = resolvedConnectPath,
         )
 
-        val instance = selfNodeInfo.toNacos()
+        // 先以不可发现状态注册；Application 在业务 Actor/端口全部就绪后再启用。
+        val instance = selfNodeInfo.toNacos(enabled = false)
         try {
             Nacos.naming.registerInstance(kind.name, Nacos.conf.group, instance)
         } catch (e: Exception) {
             logger.error(e) { "nacos registerInstance fail (nacos unreachable?)" }
             return false
         }
+        selfInstance = instance
         logger.info { "registered to nacos: $kind#$id $host:${finalPorts.artery}" }
 
         Exit.addExitListener {
             runCatching { Nacos.naming.deregisterInstance(kind.name, Nacos.conf.group, instance) }
         }
         return true
+    }
+
+    /** 各 XxxStart 完成后调用，使本节点开始参与发现与负载均衡。 */
+    fun markStartupComplete(): Boolean {
+        if (!this::selfInstance.isInitialized) return false
+        return try {
+            selfInstance.isEnabled = true
+            // 当前 Nacos 客户端没有 updateInstance API；同 instanceId 重新注册即更新实例。
+            Nacos.naming.registerInstance(
+                selfNodeInfo.kind.name,
+                Nacos.conf.group,
+                selfInstance,
+            )
+            logger.info { "node startup complete: ${selfNodeInfo.kind}#${selfNodeInfo.nodeId}" }
+            true
+        } catch (error: Exception) {
+            logger.error(error) { "mark startup complete failed" }
+            false
+        }
     }
 
     /** 启动 actor system（注册成功后调用，端口已确定；loglevel 等来自 Nacos net.yml） */

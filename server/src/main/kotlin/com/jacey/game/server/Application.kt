@@ -1,7 +1,15 @@
 package com.jacey.game.server
 
+import com.jacey.game.battle.BattleStart
+import com.jacey.game.common.framework.net.NodeId
 import com.jacey.game.common.framework.net.NodeKind
+import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.process.Exit
+import com.jacey.game.gate.GateStart
+import com.jacey.game.global.GlobalStart
+import com.jacey.game.insight.InsightStart
+import com.jacey.game.lobby.LobbyStart
+import com.jacey.game.portal.PortalStart
 import kotlinx.cli.ArgParser
 import kotlinx.cli.ArgType
 import kotlinx.cli.required
@@ -16,17 +24,11 @@ import kotlinx.cli.required
  *   java -jar server-all.jar --kind global --id 1
  */
 suspend fun main(args: Array<String>) {
-    // 尽早设置日志目录（log4j2.xml 的 ${sys:logDir}），必须在任何 logger 使用前
-    val kindIdx = args.indexOf("--kind")
-    if (kindIdx >= 0 && kindIdx + 1 < args.size) {
-        System.setProperty("logDir", args[kindIdx + 1])
-    }
-
-    // GNU 风格：同时支持 "--kind lobby" 与 "--kind=lobby"（部署 command 用等号写法）
+    // 与 reference code 一致：入口只负责参数解析、节点分派和进程生命周期。
     val parser = ArgParser("jgame-server", prefixStyle = ArgParser.OptionPrefixStyle.GNU)
 
     // 节点类型
-    val kind by parser.option(
+    val nodeKind by parser.option(
         ArgType.Choice<NodeKind>(),
         fullName = "kind",
         description = "节点类型: portal / gate / lobby / global / battle / insight"
@@ -42,14 +44,22 @@ suspend fun main(args: Array<String>) {
     //解析下
     parser.parse(args)
 
-    // 启动
-    val successFlag = CommonStart.start(kind, id)
-    if (successFlag) {
-        println("[$kind] server started, waiting for exit signal...")
+    val nodeId = id?.let(::NodeId)
+    val success = when (nodeKind) {
+        NodeKind.portal -> PortalStart.start(nodeId)
+        NodeKind.gate -> GateStart.start(nodeId)
+        NodeKind.lobby -> LobbyStart.start(nodeId)
+        NodeKind.global -> GlobalStart.start(nodeId)
+        NodeKind.battle -> BattleStart.start(nodeId)
+        NodeKind.insight -> InsightStart.start(nodeId)
+    }
+
+    if (success && NacosService.markStartupComplete()) {
+        println("[$nodeKind] server started, waiting for exit signal...")
         // 等待退出
         Exit.await()
     } else {
-        println("[$kind] server start FAILED")
+        println("[$nodeKind] server start FAILED")
         Exit.exit(999)
     }
 }

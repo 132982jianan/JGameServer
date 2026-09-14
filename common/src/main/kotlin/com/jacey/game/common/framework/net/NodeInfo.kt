@@ -59,13 +59,14 @@ data class NodeInfo(
     }
 
     /** 序列化为 Nacos Instance */
-    fun toNacos(): com.alibaba.nacos.api.naming.pojo.Instance {
+    fun toNacos(enabled: Boolean = true): com.alibaba.nacos.api.naming.pojo.Instance {
         val ins = com.alibaba.nacos.api.naming.pojo.Instance()
         ins.serviceName = kind.name
         ins.instanceId = nodeId.toString()
         ins.ip = arteryHost
         ins.port = arteryPort
         ins.isEphemeral = true
+        ins.isEnabled = enabled
         ins.metadata = mutableMapOf(
             KEY_NODE_ID to nodeId.toString(),
             KEY_SYSTEM_NAME to systemName,

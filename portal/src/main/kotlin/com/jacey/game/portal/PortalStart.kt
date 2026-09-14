@@ -1,7 +1,9 @@
 package com.jacey.game.portal
 
+import com.jacey.game.common.CommonStart
 import com.jacey.game.common.framework.ktor.Http
 import com.jacey.game.common.framework.net.NacosService
+import com.jacey.game.common.framework.net.NodeId
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.akka.NoopNodeActor
@@ -12,7 +14,8 @@ import io.ktor.server.response.respondText
 import io.ktor.server.routing.get
 
 object PortalStart {
-    suspend fun startBusiness(): Boolean {
+    suspend fun start(nodeId: NodeId?): Boolean {
+        if (!CommonStart.start(NodeKind.portal, nodeId)) return false
         AkkaService.create<NoopNodeActor>(NodeKind.portal.actorName)
         NacosService.subscribeByNodeKind(NodeKind.gate)
         val ports = NacosService.netConfig.calNodePortByNodeKindAndNodeId(

@@ -80,7 +80,7 @@ AccountId = "LoginDebug_" + LoginName
 2. Gate 建立连接时创建 GateActor，按 AccountId 对健康 Lobby 做稳定哈希。
 3. LobbyRootActor 按 AccountId 定位 AccountActor。
 4. 账号不存在时创建 DbAccount，并分配唯一 PlayerId；不存在独立注册步骤。
-5. AccountActor 创建 PlayerActor；PlayerActor 加载 DbPlayer，不存在时仅在内存中创建。
+5. AccountActor 请求 LobbyRootActor 按 PlayerId 取得或创建同级 PlayerActor；PlayerActor 加载 DbPlayer，不存在时仅在内存中创建。
 6. PlayerActor 使用 `askAwait(GlobalRootActor)` 查询玩家是否仍在某场 Battle，并把返回的 UserState 放入登录响应。
 7. GateActor 绑定 PlayerId 并把 LoginResponse 写回自己的 Netty Channel。
 

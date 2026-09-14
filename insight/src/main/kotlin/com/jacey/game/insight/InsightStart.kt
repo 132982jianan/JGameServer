@@ -1,8 +1,10 @@
 package com.jacey.game.insight
 
+import com.jacey.game.common.CommonStart
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.ktor.Http
 import com.jacey.game.common.framework.net.NodeKind
+import com.jacey.game.common.framework.net.NodeId
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.constants.CookieConstant
 import com.jacey.game.common.framework.akka.AkkaService
@@ -27,7 +29,8 @@ object InsightStart {
     @kotlinx.serialization.Serializable
     data class ResultVO(val code: Int, val msg: String, val data: String? = null)
 
-    suspend fun startBusiness(): Boolean {
+    suspend fun start(nodeId: NodeId?): Boolean {
+        if (!CommonStart.start(NodeKind.insight, nodeId)) return false
         AkkaService.create<NoopNodeActor>(NodeKind.insight.actorName)
         ensureAdmin()
 
