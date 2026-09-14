@@ -56,6 +56,7 @@ Portal 不认证、不创建账号、不签票据。Gate 不加载 Account/Playe
 | ActorState | Actor 内部独占的 data class/字段，只由该 Actor 串行修改 |
 | 跨节点定位 | `NodeKind + NodeId` 经 Nacos 找到节点根 Actor |
 | 同步式 RPC | `ActorRef.askAwait(...)`，代码顺序执行、协程挂起不阻塞线程 |
+| Actor 定时器 | 每个 Actor 继承 `timer(duration) { ... }`，到期后回调排队串行执行 |
 
 当前主要映射：
 
@@ -68,6 +69,14 @@ Portal 不认证、不创建账号、不签票据。Gate 不加载 Account/Playe
 - BaseBattleActor：BattleId；状态保存玩家、棋盘、回合、事件、准备集合和 GateActorRef。
 
 为了区分上下行，Netty 入站包装为 `GateClientMsg`，业务节点回包仍是 `NetMessage`，两者由同一个 GateActor 处理。项目没有 `GateResponseActor`、`ClientSession` 或 `ClientSessionManagerService`。
+
+### Actor 定时器
+
+参考 code 的 `Actor.timer` / `ActorTimer` 和 `ActorManager.serve` 的自动注册方式，`BaseMessageActor` 内置 `timer(1.seconds) { ... }` 并自动注册 `ActorTimer.process`，所有业务 Actor 自动继承。计时协程只负责向自身投递消息，挂起回调通过普通处理器分发表在 Actor 的消息循环中执行，可以直接读写 ActorState，无需业务额外注册处理器或创建 CoroutineScope。`CoroutineActor` 只负责串行消费，不判断定时消息类型。
+
+计时 scope 和调度线程池由所有 Actor 共享，每个 Actor 仅保留任务取消句柄，调用 `timer` 时才创建计时协程。消息串行性来自唯一的消费协程顺序调用处理器：处理器挂起时也不会开始下一条消息；`limitedParallelism(1)` 本身不能阻止多个协程在挂起点交错执行。
+
+`timer` 返回的 `Job` 与 code 一样，只代表等待和投递：`cancel()` 可以取消尚未投递的任务，Job 完成不代表回调已经执行。Actor 停止或重启时自动取消旧实例的待触发定时器，跳过旧实例尚未执行的定时请求；已经开始的回调按当前消息执行完毕。循环业务在回调末尾重新调用 `timer`。`MatchActor` 已使用该方式，启动后立即检查匹配，随后每轮完成后间隔 1 秒再次检查，异常后仍继续调度，避免慢请求期间堆积 tick。
 
 ## 登录流程
 

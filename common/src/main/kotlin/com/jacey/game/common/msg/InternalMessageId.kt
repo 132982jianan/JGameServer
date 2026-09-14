@@ -2,6 +2,7 @@ package com.jacey.game.common.msg
 
 /** 仅在 Lobby 本地 Actor 或节点主 Actor 之间使用，不属于客户端协议号段。 */
 object InternalMessageId {
+    const val ACTOR_TIMER = -1
     const val GATE_DISCONNECTED = -901
     const val ACCOUNT_LOGOUT = -1001
     const val PLAYER_LOGIN = -1101

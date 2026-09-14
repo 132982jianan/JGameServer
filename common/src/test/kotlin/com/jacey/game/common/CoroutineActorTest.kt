@@ -30,10 +30,15 @@ class CoroutineActorTest {
     }
 
     /** 慢 actor：每条消息处理挂起 200ms，记录并发进入次数 */
-    class SlowActor(val concurrent: AtomicInteger, val order: Channel<Int>) : BaseMessageActor() {
+    class SlowActor(
+        val concurrent: AtomicInteger,
+        val order: Channel<Int>,
+        val maxConcurrent: AtomicInteger = AtomicInteger(),
+    ) : BaseMessageActor() {
         init {
             registerHandler(NetMessage::class.java) { msg, _ ->
-                concurrent.incrementAndGet()
+                val active = concurrent.incrementAndGet()
+                maxConcurrent.updateAndGet { maxOf(it, active) }
                 val n = msg.data?.get(0)?.toInt() ?: 0
                 delay(200) // 挂起点：模拟 DB/远端调用
                 order.send(n)
@@ -63,9 +68,10 @@ class CoroutineActorTest {
     fun `messages are processed serially while handler suspends`() { runBlocking {
         val system = ActorSystem.create("test-serial")
         val concurrent = AtomicInteger(0)
+        val maxConcurrent = AtomicInteger(0)
         val order = Channel<Int>(Channel.UNLIMITED)
         val actor = system.actorOf(
-            Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow"
+            Props.create(SlowActor::class.java) { SlowActor(concurrent, order, maxConcurrent) }, "slow"
         )
 
         // 连发 5 条消息
@@ -79,7 +85,8 @@ class CoroutineActorTest {
             repeat(5) { received.add(order.receive()) }
         }
         assertEquals(listOf(0, 1, 2, 3, 4), received)
-        // 串行验证：任意时刻并发处理数不会超过 1（通过处理器内 increment/decrement 隐式保证）
+        // 挂起期间也算正在处理：验证没有第二条消息进入同一个 Actor。
+        assertEquals(1, maxConcurrent.get())
 
         scala.concurrent.Await.ready(system.terminate(), scala.concurrent.duration.FiniteDuration(3, java.util.concurrent.TimeUnit.SECONDS))
         }
@@ -95,7 +102,7 @@ class CoroutineActorTest {
         // 5 个不同 actor，各自处理挂起 200ms；共享小线程池时若阻塞则无法并发
         val actors = (0 until 5).map { i ->
             system.actorOf(
-                Props.create(SlowActor::class.java) { SlowActor(concurrent, order) }, "slow$i"
+                Props.create(SlowActor::class.java) { SlowActor(concurrent, order, maxConcurrent) }, "slow$i"
             ) to i
         }
         actors.forEach { (ref, i) ->
@@ -106,6 +113,7 @@ class CoroutineActorTest {
             repeat(5) { received.add(order.receive()) }
         }
         assertEquals(5, received.size)
+        kotlin.test.assertTrue(maxConcurrent.get() > 1)
 
         scala.concurrent.Await.ready(system.terminate(), scala.concurrent.duration.FiniteDuration(3, java.util.concurrent.TimeUnit.SECONDS))
         }

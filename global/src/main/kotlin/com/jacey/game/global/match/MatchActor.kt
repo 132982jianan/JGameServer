@@ -6,32 +6,26 @@ import com.jacey.game.common.framework.akka.ClusterService
 import com.jacey.game.common.framework.akka.askAwait
 import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
-import com.jacey.game.common.proto3.LocalServer
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.global.actor.GlobalBattleCreated
 import com.jacey.game.global.actor.PlayerBattleLocation
 import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.delay
 import java.util.UUID
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 
 data class MatchPlayer(val playerId: Int, val gateActor: ActorRef)
 
 data class MatchActorState(
     val twoPlayerQueue: ArrayDeque<MatchPlayer> = ArrayDeque(),
     val matchingPlayerIds: MutableSet<Int> = HashSet(),
-    var stopped: Boolean = false,
 )
 
 /** Global 单实例匹配 Actor；匹配池是 ActorState，不写 Redis/Mongo。 */
@@ -41,7 +35,6 @@ class MatchActor(
 ) : BaseMessageActor() {
     private val log = KotlinLogging.logger {}
     private val state = MatchActorState()
-    private var matchJob: Job? = null
 
     init {
         registerHandler(NetMessage::class.java) { msg, sender -> onNetMessage(msg, sender) }
@@ -51,28 +44,20 @@ class MatchActor(
                 removeFromQueue(offline.playerId)
             }
         }
-        registerHandler(LocalMessage::class.java) { msg, _ ->
-            if (msg.msgId == LocalServer.LocalRpcNameEnum.LocalRpcGlobalMatch_VALUE) doMatch()
-        }
     }
 
     override fun preStart() {
         super.preStart()
-        matchJob = CoroutineScope(Dispatcher.Scheduler).launch {
-            while (isActive) {
-                self().tell(
-                    LocalMessage(LocalServer.LocalRpcNameEnum.LocalRpcGlobalMatch_VALUE),
-                    ActorRef.noSender(),
-                )
-                delay(1000)
-            }
-        }
+        timer(Duration.ZERO, ::matchTick)
     }
 
-    override fun postStop() {
-        state.stopped = true
-        matchJob?.cancel()
-        super.postStop()
+    /** 本轮处理完成后再计时，避免远程调用缓慢时积压匹配 tick。 */
+    private suspend fun matchTick() {
+        try {
+            doMatch()
+        } finally {
+            timer(1.seconds, ::matchTick)
+        }
     }
 
     private suspend fun onNetMessage(msg: NetMessage, gateActor: ActorRef?) {
@@ -117,7 +102,7 @@ class MatchActor(
     }
 
     private suspend fun doMatch() {
-        if (state.stopped || state.twoPlayerQueue.size < 2) return
+        if (state.twoPlayerQueue.size < 2) return
         val players = listOf(
             state.twoPlayerQueue.removeFirst(),
             state.twoPlayerQueue.removeFirst(),

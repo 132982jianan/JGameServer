@@ -44,6 +44,8 @@ abstract class CoroutineActor(
     /** actor 启动：拉起消费协程（并发度=1，串行消费 Channel） */
     override fun preStart() {
         val scope = CoroutineScope(Dispatcher.Actor + CoroutineName(self().path().name()))
+        // 串行性来自唯一的消费协程和直接调用 onMessage，挂起期间也不处理下一条。
+        // 不要对每条消息 launch：即便 limitedParallelism(1)，挂起时仍会交错执行。
         loopJob = scope.launch {
             for (envelope in channel) {
                 try {

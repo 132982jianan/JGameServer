@@ -4,15 +4,19 @@ import akka.actor.ActorRef
 import akka.actor.Terminated
 import com.jacey.game.common.exception.RpcErrorException
 import com.jacey.game.common.framework.akka.CoroutineActor
+import com.jacey.game.common.framework.process.Dispatcher
 import com.jacey.game.common.msg.IMessage
-import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
 
 /**
  * 基础消息处理 Actor（协程化）
@@ -28,6 +32,36 @@ abstract class BaseMessageActor : CoroutineActor() {
 
     /** 消息处理器注册表：msgClass -> handler(msg, sender) */
     private val handlers = HashMap<Class<*>, suspend (Any, ActorRef?) -> Unit>()
+
+    /** 仅为任务取消句柄，不启动协程；每个 Actor 实例独立管理定时器生命周期。 */
+    private val timerLifecycle = SupervisorJob()
+
+    init {
+        // 对应 code 的 ActorManager.serve 自动注册 ActorTimer.process。
+        registerHandler(ActorTimer::class.java) { msg, _ -> msg.process(timerLifecycle) }
+    }
+
+    /**
+     * 延迟后向自身投递 ActorTimer，由已注册的处理器串行执行挂起回调。
+     * 可以直接读写 ActorState；Actor 忙碌时回调排队，不保证精确执行时间。
+     * 与 code 一致，返回的 Job 仅代表等待和投递，cancel() 可取消尚未投递的任务。
+     * 已投递的请求由 Actor 处理。循环任务可在回调末尾再次调用 timer。
+     */
+    fun timer(duration: Duration, action: suspend () -> Unit): Job {
+        require(duration.isFinite() && duration >= Duration.ZERO) { "timer duration must be finite and non-negative" }
+        val target = self()
+        return timerScope.launch(timerLifecycle + CoroutineName("timer-${target.path().name()}")) {
+            delay(duration)
+            ensureActive()
+            target.tell(ActorTimer(timerLifecycle, action), ActorRef.noSender())
+        }
+    }
+
+    override fun postStop() {
+        // 先取消计时和排队回调，再由 CoroutineActor 清算普通消息。
+        timerLifecycle.cancel()
+        super.postStop()
+    }
 
     /** 子类构造时注册消息处理器（sender 为回信目标，可为 null） */
     fun <T : Any> registerHandler(clz: Class<T>, handler: suspend (T, ActorRef?) -> Unit) {
@@ -84,26 +118,12 @@ abstract class BaseMessageActor : CoroutineActor() {
     }
 
     companion object {
+        /** 所有 Actor 共享计时 scope；调用 timer 时才创建计时协程。 */
+        private val timerScope = CoroutineScope(Dispatcher.Scheduler)
+
         /** 构造带类型键的注册辅助（由 Kotlin reified 使用） */
         inline fun <reified T> typeOf(): Class<T> {
             return T::class.java
-        }
-    }
-}
-
-/** 定时任务调度辅助：以毫秒间隔向指定 actor 发送消息（非阻塞，基于协程 delay） */
-fun scheduleMsg(
-    scope: CoroutineScope,
-    actor: ActorRef,
-    msg: IMessage,
-    initialDelayMs: Long,
-    intervalMs: Long,
-): kotlinx.coroutines.Job {
-    return scope.launch(CoroutineName("schedule-${msg.msgId}")) {
-        kotlinx.coroutines.delay(initialDelayMs)
-        while (isActive) {
-            actor.tell(msg, ActorRef.noSender())
-            kotlinx.coroutines.delay(intervalMs)
         }
     }
 }
