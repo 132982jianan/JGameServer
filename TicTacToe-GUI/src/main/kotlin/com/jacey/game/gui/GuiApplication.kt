@@ -18,7 +18,7 @@ import kotlinx.coroutines.launch
  * 1. 日志目录 sys prop（无配置文件，路径 logs/gui/）
  * 2. 注册消息处理器
  * 3. Swing 初始化（非 headless），打开登录窗口
- * 4. 后台协程：GM HTTP 取网关地址 → Netty 连接
+ * 4. 后台协程：Portal HTTP 取 Gate 地址 → Netty 连接
  */
 suspend fun main() {
     val logger = KotlinLogging.logger {}
@@ -42,7 +42,7 @@ suspend fun main() {
             SwingUtilities.invokeLater {
                 javax.swing.JOptionPane.showMessageDialog(
                     null,
-                    "Connect failed: ${e.message}\n(GM = ${GuiConfig.serverHost}:${GuiConfig.serverPort})"
+                    "Connect failed: ${e.message}\n(Portal = ${GuiConfig.serverHost}:${GuiConfig.serverPort})"
                 )
             }
         }

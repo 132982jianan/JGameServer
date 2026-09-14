@@ -53,10 +53,11 @@ if errorlevel 1 goto status_failed
 
 echo.
 echo JGameServer deployment completed successfully.
-echo GM HTTP endpoint:      http://127.0.0.1:8080/gateway
+echo Portal allocation:     http://127.0.0.1:8080/gate
 echo Nacos console:         http://127.0.0.1:8848/nacos
-echo Client TCP entry:      127.0.0.1:10001
-echo Client WebSocket:      127.0.0.1:10002 (path /websocket)
+echo Client TCP entry:      127.0.0.1:25001
+echo Client WebSocket:      127.0.0.1:25002 (path /websocket)
+echo Insight HTTP:          http://127.0.0.1:9000
 echo Mongo:                 127.0.0.1:27017 (db: jgame_server)
 echo Redis:                 127.0.0.1:6379
 set "EXIT_CODE=0"

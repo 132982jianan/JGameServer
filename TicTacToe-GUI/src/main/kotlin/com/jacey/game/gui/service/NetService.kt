@@ -18,13 +18,16 @@ import kotlinx.coroutines.withContext
 import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.URL
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /**
  * 服务器连接管理（object 单例，原 ServerNodeManager + NettySocketServer + OnlineClientManager）
  *
  * 启动流程：
- * 1. HTTP GET http://gmHost:gmPort/gateway 获取网关地址 ip:port
- * 2. Netty TCP 连接网关（复用与 gateway 相同的线协议编解码）
+ * 1. HTTP GET http://portalHost:portalPort/gate 获取 Gate endpoint
+ * 2. Netty TCP 连接 Gate
  */
 object NetService {
     private val logger = KotlinLogging.logger {}
@@ -36,27 +39,28 @@ object NetService {
     private var workerGroup: NioEventLoopGroup? = null
 
     /**
-     * 连接网关（挂起）：GM HTTP 取地址 → Netty connect
+     * 连接 Gate（挂起）：Portal HTTP 取地址 → Netty connect
      */
     suspend fun connect() = withContext(Dispatchers.IO) {
-        // 1. 从 GM HTTP 获取网关地址
-        val url = URL("http://${GuiConfig.serverHost}:${GuiConfig.serverPort}/gateway")
+        val url = URL("http://${GuiConfig.serverHost}:${GuiConfig.serverPort}/gate")
         val conn = url.openConnection() as HttpURLConnection
         conn.connectTimeout = 3000
         conn.readTimeout = 3000
-        val gatewayAddress = try {
+        val body = try {
             conn.inputStream.bufferedReader().readText().trim()
         } finally {
             conn.disconnect()
         }
-        if (gatewayAddress.isEmpty()) {
-            logger.error { "【服务器连接获取异常】无可用网关，GM 返回空" }
-            throw IllegalStateException("no gateway available")
+        if (body.isEmpty()) {
+            throw IllegalStateException("no gate available")
         }
-        val parts = gatewayAddress.split(":")
+        val gateAddress = Json.parseToJsonElement(body).jsonObject["tcpEndpoint"]
+            ?.jsonPrimitive?.content.orEmpty()
+        if (gateAddress.isEmpty()) throw IllegalStateException("Portal returned no TCP Gate endpoint")
+        val parts = gateAddress.split(":")
         val host = parts[0]
         val port = parts[1].toInt()
-        logger.info { "获取到网关地址: $host:$port" }
+        logger.info { "获取到 Gate 地址: $host:$port" }
 
         // 2. Netty 客户端连接
         val group = NioEventLoopGroup()
@@ -76,7 +80,7 @@ object NetService {
             })
         val future = bootstrap.connect().sync()
         channel = future.channel()
-        logger.info { "已连接网关: $host:$port" }
+        logger.info { "已连接 Gate: $host:$port" }
     }
 
     /** 发送消息到网关（非阻塞 write） */

@@ -1,20 +1,8 @@
 package com.jacey.game.gui.jframe
 
-import javax.swing.JFrame
-import kotlin.system.exitProcess
-import javax.swing.JLabel
-import javax.swing.JPanel
-import javax.swing.JButton
-import javax.swing.JPasswordField
-import javax.swing.JTextField
-import java.awt.event.MouseAdapter
-import java.awt.event.MouseEvent
-import java.awt.event.WindowAdapter
-import java.awt.event.WindowEvent
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.common.util.MD5Util
 import com.jacey.game.gui.config.GuiConfig
 import com.jacey.game.gui.service.NetService
 import com.jacey.game.gui.service.ViewManagerService
@@ -23,18 +11,18 @@ import java.awt.Dimension
 import java.awt.GridBagConstraints
 import java.awt.GridBagLayout
 import java.awt.Insets
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
+import javax.swing.JButton
+import javax.swing.JFrame
+import javax.swing.JLabel
 import javax.swing.JOptionPane
+import javax.swing.JTextField
+import kotlin.system.exitProcess
 
-/**
- * 登录/注册窗口（原 LoginFrame）
- */
+/** LoginDebug：只输入 LoginName；账号和角色不存在时由 Lobby 自动创建。 */
 class LoginFrame : JFrame() {
-    private val playerNameLab = JLabel("用户名")
-    private val passwordLab = JLabel("密 码：")
-    private val playerNameText = JTextField()
-    private val passwordText = JPasswordField()
-    private val registeredBtn = JButton("注册")
-    private val loginBtn = JButton("登录")
+    private val loginNameText = JTextField()
 
     init {
         UIUtil.frameType()
@@ -47,35 +35,19 @@ class LoginFrame : JFrame() {
             }
         })
 
-        registeredBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) = onRegister()
-        })
-        loginBtn.addMouseListener(object : MouseAdapter() {
-            override fun mouseClicked(e: MouseEvent?) = onLogin()
-        })
-
-        val labels = arrayOf<JLabel>(playerNameLab, passwordLab)
-        val texts = arrayOf<JTextField>(playerNameText, passwordText)
-        val buttons = arrayOf<JButton>(loginBtn, registeredBtn)
-
+        val loginButton = JButton("登录 / 自动注册").apply {
+            addActionListener { onLogin() }
+        }
         layout = GridBagLayout()
-        val gc = GridBagConstraints()
-        gc.insets = Insets(8, 8, 8, 8)
-        gc.gridx = 0; gc.gridy = 0
-        add(labels[0], gc)
-        gc.gridx = 1; gc.gridy = 0
-        playerNameText.preferredSize = Dimension(200, 28)
-        add(texts[0], gc)
-        gc.gridx = 0; gc.gridy = 1
-        add(labels[1], gc)
-        gc.gridx = 1; gc.gridy = 1
-        passwordText.preferredSize = Dimension(200, 28)
-        add(texts[1], gc)
-        gc.gridx = 1; gc.gridy = 2
-        val btnPanel = JPanel()
-        btnPanel.add(buttons[0])
-        btnPanel.add(buttons[1])
-        add(btnPanel, gc)
+        val gc = GridBagConstraints().apply { insets = Insets(8, 8, 8, 8) }
+        gc.gridx = 0
+        gc.gridy = 0
+        add(JLabel("LoginName"), gc)
+        gc.gridx = 1
+        loginNameText.preferredSize = Dimension(220, 28)
+        add(loginNameText, gc)
+        gc.gridy = 1
+        add(loginButton, gc)
 
         pack()
         setLocationRelativeTo(null)
@@ -83,31 +55,20 @@ class LoginFrame : JFrame() {
         ViewManagerService.loginFrame = this
     }
 
-    private fun onRegister() {
-        if (!NetService.isConnected) {
-            JOptionPane.showMessageDialog(this,
-                "Server not connected !! ${GuiConfig.serverHost}:${GuiConfig.serverPort}")
-            return
-        }
-        val name = playerNameText.text
-        val password = String(passwordText.password)
-        val req = CommonMsg.RegistRequest.newBuilder()
-            .setUsername(name)
-            .setPassword(password)
-        NetService.send(NetMessage(Rpc.RpcNameEnum.Regist_VALUE, req))
-    }
-
     private fun onLogin() {
         if (!NetService.isConnected) {
-            JOptionPane.showMessageDialog(this,
-                "Server not connected !! ${GuiConfig.serverHost}:${GuiConfig.serverPort}")
+            JOptionPane.showMessageDialog(
+                this,
+                "Portal/Gate not connected: ${GuiConfig.serverHost}:${GuiConfig.serverPort}",
+            )
             return
         }
-        val name = playerNameText.text
-        val password = String(passwordText.password)
-        val req = CommonMsg.LoginRequest.newBuilder()
-            .setUsername(name)
-            .setPasswordMD5(MD5Util.md5(password))
-        NetService.send(NetMessage(Rpc.RpcNameEnum.Login_VALUE, req))
+        val loginName = loginNameText.text.trim()
+        if (loginName.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "LoginName 不能为空")
+            return
+        }
+        val request = CommonMsg.LoginRequest.newBuilder().setLoginName(loginName)
+        NetService.send(NetMessage(Rpc.RpcNameEnum.Login_VALUE, request))
     }
 }

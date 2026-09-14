@@ -77,6 +77,9 @@ object MessageRouterService {
                 logger.error { "【登录响应】无法登录，账号被封禁" }
                 swingDialog("Unable to login, the user has been banned")
             }
+            Rpc.RpcErrorCodeEnum.LoginErrorAlreadyLogin_VALUE -> {
+                swingDialog("账号已在登录：旧连接和当前连接均已断开，请重新连接后再登录")
+            }
             Rpc.RpcErrorCodeEnum.LoginErrorUsernameIsNotExist_VALUE -> {
                 logger.error { "【登录响应】用户名不存在" }
                 swingDialog("Username does not exist")

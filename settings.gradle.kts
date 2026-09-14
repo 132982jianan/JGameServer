@@ -21,12 +21,12 @@ dependencyResolutionManagement {
     }
 }
 
-include(":game-common")
-include(":game-db")
-include(":game-gm-server")
-include(":game-logic-server")
-include(":game-battle-server")
-include(":game-chat-server")
-include(":game-gateway-server")
+include(":common")
+include(":portal")
+include(":gate")
+include(":lobby")
+include(":global")
+include(":battle")
+include(":insight")
 include(":server")
 include(":TicTacToe-GUI")

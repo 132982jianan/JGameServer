@@ -8,11 +8,12 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":game-gm-server"))
-    implementation(project(":game-logic-server"))
-    implementation(project(":game-battle-server"))
-    implementation(project(":game-chat-server"))
-    implementation(project(":game-gateway-server"))
+    implementation(project(":portal"))
+    implementation(project(":gate"))
+    implementation(project(":lobby"))
+    implementation(project(":battle"))
+    implementation(project(":global"))
+    implementation(project(":insight"))
     implementation(libs.kotlinx.cli)
 
     configurations.configureEach {

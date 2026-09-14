@@ -5,7 +5,7 @@ plugins {
 
 dependencies {
     // 复用服务端公共模块：消息编解码/protobuf 生成类/工具
-    api(project(":game-common"))
+    api(project(":common"))
     implementation(libs.io.github.oshai.kotlin.logging.jvm)
     implementation(libs.io.netty.netty.all)
     implementation(libs.slf4j.api)

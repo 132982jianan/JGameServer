@@ -1,7 +1,8 @@
 package com.jacey.game.server
 
 import com.jacey.game.battle.BattleStart
-import com.jacey.game.chat.ChatStart
+import com.jacey.game.global.GlobalStart
+import com.jacey.game.gate.GateStart
 import com.jacey.game.common.framework.nacos.Nacos
 import com.jacey.game.common.framework.config.AppConfig
 import com.jacey.game.common.framework.net.NacosService
@@ -10,14 +11,16 @@ import com.jacey.game.common.framework.process.Log4j2
 import com.jacey.game.common.framework.mongo.Mongo
 import com.jacey.game.common.framework.redis.Redis
 import com.jacey.game.common.framework.net.NodeKind
-import com.jacey.game.gateway.GatewayStart
-import com.jacey.game.gm.GmStart
-import com.jacey.game.logic.LogicStart
+import com.jacey.game.common.db.Db
+import com.jacey.game.common.framework.akka.AkkaService
+import com.jacey.game.insight.InsightStart
+import com.jacey.game.lobby.LobbyStart
+import com.jacey.game.portal.PortalStart
 
 /**
  * 各节点通用启动序列（替代原 Spring Boot 启动 + CoreManager）
  *
- * 顺序：日志 → 信号 → Nacos → 节点注册(含 akka) → Redis → Mongo → 业务启动(actors/HTTP/Netty)
+ * 顺序：日志 → 信号 → Nacos → 节点注册(含 Akka) → 按需存储 → 业务启动(actors/HTTP/Netty)
  */
 object CommonStart {
     suspend fun start(kind: NodeKind, requestedId: Int?): Boolean {
@@ -34,35 +37,40 @@ object CommonStart {
         }
 
         // 4. 节点注册 + ActorSystem（artery 地址/对外端口进 Nacos metadata）
-        val connectPath = if (kind == NodeKind.gateway) AppConfig.instance.gatewayConnectPath else ""
-        val isMainLogic = kind == NodeKind.logic && AppConfig.instance.isMainLogicServer
-        if (!NacosService.start(kind, requestedId, kind.actorName, connectPath, isMainLogic)) {
+        if (!NacosService.start(kind, requestedId, kind.actorName)) {
             System.err.println("node register fail")
             return false
         }
 
         // 启动akka
         NacosService.startActorSystem()
+        Exit.addExitListener { AkkaService.close() }
 
-        // 5. Redis
-        if (!Redis.init()) {
-            System.err.println("redis connect fail, check mongo/redis config in nacos")
-            return false
+        // Redis 仅用于 Insight 的短期令牌；在线/匹配/战斗运行态全部在 ActorState。
+        if (kind == NodeKind.insight) {
+            if (!Redis.init()) {
+                System.err.println("redis connect fail, check mongo/redis config in nacos")
+                return false
+            }
         }
 
-        // 6. MongoDB
-        if (!Mongo.init()) {
-            System.err.println("mongo connect fail")
-            return false
+        if (kind == NodeKind.lobby || kind == NodeKind.battle || kind == NodeKind.insight) {
+            // 6. MongoDB + 统一集合入口
+            if (!Mongo.init()) {
+                System.err.println("mongo connect fail")
+                return false
+            }
+            Db.start()
         }
 
         // 7. 业务启动（各模块 XxxStart）
         val success = when (kind) {
-            NodeKind.gm -> GmStart.startBusiness()
-            NodeKind.gateway -> GatewayStart.startBusiness()
-            NodeKind.logic -> LogicStart.startBusiness()
+            NodeKind.portal -> PortalStart.startBusiness()
+            NodeKind.gate -> GateStart.startBusiness()
+            NodeKind.lobby -> LobbyStart.startBusiness()
+            NodeKind.global -> GlobalStart.startBusiness()
             NodeKind.battle -> BattleStart.startBusiness()
-            NodeKind.chat -> ChatStart.startBusiness()
+            NodeKind.insight -> InsightStart.startBusiness()
         }
 
         if (!success) {
@@ -70,8 +78,6 @@ object CommonStart {
             return false
         }
 
-        // 8. 退出钩子：注销 Nacos 实例
-        Exit.addExitListener { }
         return true
     }
 }

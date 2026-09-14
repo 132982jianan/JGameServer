@@ -12,7 +12,7 @@ object MessageFactoryService {
 
     fun init() {
         MessageRouterService.register(Rpc.RpcNameEnum.Login_VALUE) { msg -> MessageRouterService.onLoginResponse(msg) }
-        MessageRouterService.register(Rpc.RpcNameEnum.Regist_VALUE) { msg -> MessageRouterService.onRegistResponse(msg) }
+        MessageRouterService.register(Rpc.RpcNameEnum.Heartbeat_VALUE) { }
         MessageRouterService.register(Rpc.RpcNameEnum.Match_VALUE) { msg -> MessageRouterService.onMatchResponse(msg) }
         MessageRouterService.register(Rpc.RpcNameEnum.CancelMatch_VALUE) { msg -> MessageRouterService.onCancelMatchResponse(msg) }
         MessageRouterService.register(Rpc.RpcNameEnum.GetBattleInfo_VALUE) { msg -> MessageRouterService.onGetBattleInfoResponse(msg) }
