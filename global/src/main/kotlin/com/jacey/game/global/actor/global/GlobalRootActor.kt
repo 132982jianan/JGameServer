@@ -1,15 +1,18 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.global
 
 import akka.actor.ActorRef
 import akka.actor.Props
 import com.jacey.game.common.akka.BaseMessageActor
+import com.jacey.game.common.msg.InternalMessageId
+import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
-import com.jacey.game.common.msg.LocalMessage
-import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.global.match.MatchActor
+import com.jacey.game.global.actor.room.RoomManagerActor
+import com.jacey.game.global.actor.battle.BattleManagerActor
+import com.jacey.game.global.actor.chat.ChatManagerActor
+import com.jacey.game.global.actor.match.MatchActor
 
 /** Global 单实例对外根 Actor，内部拆分 MatchActor、ChatManagerActor 与 RoomManagerActor。 */
 class GlobalRootActor : BaseMessageActor() {
@@ -20,12 +23,15 @@ class GlobalRootActor : BaseMessageActor() {
 
     init {
         registerHandler(LocalMessage::class.java) { msg, sender ->
-            if (msg.msgId == InternalMessageId.GLOBAL_CHAT_PUSH) chatManagerActor.tell(msg, sender)
+            if (msg.msgId == InternalMessageId.GLOBAL_CHAT_PUSH) {
+                chatManagerActor.tell(msg, sender)
+            }
         }
         registerHandler(NetMessage::class.java) { msg, sender ->
             when (msg.msgId) {
                 Rpc.RpcNameEnum.Match_VALUE,
                 Rpc.RpcNameEnum.CancelMatch_VALUE -> matchActor.tell(msg, sender)
+
                 in 6000..6999 -> battleManagerActor.tell(msg, sender)
                 else -> chatManagerActor.tell(msg, sender)
             }
@@ -37,10 +43,13 @@ class GlobalRootActor : BaseMessageActor() {
                     battleManagerActor.tell(msg, sender)
                     matchActor.tell(msg, sender)
                 }
+
                 RemoteServer.RemoteRpcNameEnum.RemoteRpcGlobalBattleEnded_VALUE ->
                     battleManagerActor.tell(msg, sender)
+
                 RemoteServer.RemoteRpcNameEnum.RemoteRpcGlobalPlayerStateQuery_VALUE ->
                     battleManagerActor.tell(msg, sender)
+
                 else -> chatManagerActor.tell(msg, sender)
             }
         }

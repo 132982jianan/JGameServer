@@ -1,4 +1,4 @@
-package com.jacey.game.global.match
+package com.jacey.game.global.actor.match
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
@@ -14,8 +14,8 @@ import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
-import com.jacey.game.global.actor.GlobalBattleCreated
-import com.jacey.game.global.actor.PlayerBattleLocation
+import com.jacey.game.global.actor.global.msg.GlobalBattleCreated
+import com.jacey.game.global.actor.battle.PlayerBattleLocation
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.util.UUID
 import kotlin.time.Duration

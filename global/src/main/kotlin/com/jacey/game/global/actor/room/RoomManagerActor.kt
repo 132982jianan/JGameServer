@@ -1,4 +1,4 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.room
 
 import akka.actor.ActorRef
 import akka.actor.Props
@@ -6,6 +6,9 @@ import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.proto3.Rpc
+import com.jacey.game.global.actor.global.msg.GlobalBattleCreated
+import com.jacey.game.global.actor.global.msg.GlobalBattleEnded
 
 /** 管理 Global 上的全部聊天房间；每个房间对应一个 RoomActor。 */
 data class RoomManagerActorState(
@@ -22,7 +25,7 @@ class RoomManagerActor : BaseMessageActor() {
             val room = state.playerIdToRoom[msg.userId]
             if (room == null) {
                 sender?.tell(
-                    NetMessage(msg.msgId, com.jacey.game.common.proto3.Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE),
+                    NetMessage(msg.msgId, Rpc.RpcErrorCodeEnum.BattleChatTextErrorNotJoinBattle_VALUE),
                     self(),
                 )
             } else {

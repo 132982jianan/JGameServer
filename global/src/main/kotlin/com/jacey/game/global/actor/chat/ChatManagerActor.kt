@@ -1,4 +1,4 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.chat
 
 import akka.actor.ActorRef
 import akka.actor.Props
@@ -8,6 +8,7 @@ import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.RemoteServer
+import com.jacey.game.global.actor.global.msg.GlobalChatPush
 
 /** 在线玩家聊天 Actor 管理器；每个在线玩家对应一个 ChatActor。 */
 data class ChatManagerActorState(

@@ -1,4 +1,4 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.global.msg
 
 import com.jacey.game.common.msg.NetMessage
 

@@ -1,4 +1,4 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.chat
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor

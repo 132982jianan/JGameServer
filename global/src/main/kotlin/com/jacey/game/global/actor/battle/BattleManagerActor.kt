@@ -1,4 +1,4 @@
-package com.jacey.game.global.actor
+package com.jacey.game.global.actor.battle
 
 import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
@@ -13,6 +13,8 @@ import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.common.proto3.CommonEnum
 import com.jacey.game.common.proto3.CommonMsg
+import com.jacey.game.global.actor.global.msg.GlobalBattleCreated
+import com.jacey.game.global.actor.global.msg.GlobalBattleEnded
 
 data class PlayerBattleLocation(
     val battleId: String,
