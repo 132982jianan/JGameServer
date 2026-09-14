@@ -2,7 +2,6 @@ package com.jacey.game.gate
 
 import com.jacey.game.common.CommonStart
 import com.jacey.game.common.framework.akka.AkkaService
-import com.jacey.game.common.framework.net.NacosService
 import com.jacey.game.common.framework.net.NodeId
 import com.jacey.game.common.framework.net.NodeKind
 import com.jacey.game.gate.actor.GateRootActor
@@ -13,8 +12,6 @@ import com.jacey.game.common.framework.process.Exit
 object GateStart {
     suspend fun start(nodeId: NodeId?): Boolean {
         if (!CommonStart.start(NodeKind.gate, nodeId)) return false
-        NacosService.subscribeByNodeKind(NodeKind.lobby)
-        NacosService.subscribeByNodeKind(NodeKind.global)
         AkkaService.create<GateRootActor>(NodeKind.gate.actorName)
         NettyServer.start()
         Exit.addExitListener { NettyServer.shutdown() }

@@ -17,7 +17,6 @@ object PortalStart {
     suspend fun start(nodeId: NodeId?): Boolean {
         if (!CommonStart.start(NodeKind.portal, nodeId)) return false
         AkkaService.create<NoopNodeActor>(NodeKind.portal.actorName)
-        NacosService.subscribeByNodeKind(NodeKind.gate)
         val ports = NacosService.netConfig.calNodePortByNodeKindAndNodeId(
             NodeKind.portal,
             NacosService.selfNodeId,

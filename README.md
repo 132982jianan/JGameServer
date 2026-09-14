@@ -4,6 +4,8 @@ JGameServer 是一个以井字棋 1v1 为演示业务的分布式游戏服务器
 
 项目明确不使用 Akka Cluster Sharding，也不依赖 Akka Cluster。服务扩容采用相同 `NodeKind`、不同 `NodeId` 的多个进程；Nacos 负责节点发现，Akka Remote 负责跨进程 Actor 通信。
 
+所有节点在 `CommonStart` 中统一订阅 `NodeKind.entries` 的全部类型（包括自身类型），持续维护健康且已启用的节点目录。新增 `NodeKind` 后无需修改各 `XxxStart` 的订阅列表；各节点可通过 `ClusterService.tell/askAwait(kind, nodeId, msg)` 寻址并发送消息，具体业务消息仍需目标 Actor 注册处理器。Portal/Insight 当前使用 `NoopNodeActor`，收到业务消息只记日志。
+
 ## 当前架构
 
 ```mermaid

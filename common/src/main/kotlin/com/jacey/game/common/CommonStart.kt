@@ -19,33 +19,51 @@ import com.jacey.game.common.framework.redis.Redis
 object CommonStart {
     suspend fun start(kind: NodeKind, nodeId: NodeId?): Boolean {
         Log4j2.init(kind.name)
+
+        //TODO
         Exit.listenSignal()
 
+        //TODO
         if (!Nacos.init()) {
             System.err.println("nacos connect fail, check conf/nacos.yml")
             return false
         }
+
+        //TODO
         if (!NacosService.start(kind, nodeId, kind.actorName)) {
             System.err.println("node register fail")
             return false
         }
 
+        //TODO
         NacosService.startActorSystem()
-        Exit.addExitListener { AkkaService.close() }
 
-        // Redis 只用于 Insight 的短期令牌；在线、匹配和战斗运行态均在 ActorState。
-        if (kind == NodeKind.insight && !Redis.init()) {
+        //TODO
+        Exit.addExitListener {
+            AkkaService.close()
+        }
+
+        //TODO
+        if (!NacosService.subscribeAllNodeKinds()) {
+            System.err.println("node discovery subscribe fail")
+            return false
+        }
+
+        //TODO
+        if (!Redis.init()) {
             System.err.println("redis connect fail, check redis config in nacos")
             return false
         }
 
-        if (kind in setOf(NodeKind.lobby, NodeKind.battle, NodeKind.insight)) {
-            if (!Mongo.init()) {
-                System.err.println("mongo connect fail")
-                return false
-            }
-            Db.start()
+        //TODO
+        if (!Mongo.init()) {
+            System.err.println("mongo connect fail")
+            return false
         }
+
+        //TODO
+        Db.start()
+
         return true
     }
 }

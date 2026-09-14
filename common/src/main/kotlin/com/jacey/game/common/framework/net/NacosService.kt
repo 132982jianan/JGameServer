@@ -2,6 +2,7 @@ package com.jacey.game.common.framework.net
 
 import akka.actor.ActorRef
 import com.alibaba.nacos.api.naming.listener.NamingEvent
+import com.alibaba.nacos.api.naming.pojo.Instance
 import com.jacey.game.common.framework.akka.AkkaService
 import com.jacey.game.common.framework.akka.resolveAwait
 import com.jacey.game.common.framework.nacos.ConfigLoaderService
@@ -30,7 +31,7 @@ object NacosService {
         private set
 
     /** 各类型节点的路由表：kind -> (nodeId -> NodeInfo) */
-    private val nodeKind2NodeId2NodeInfoMap = ConcurrentHashMap<NodeKind, ConcurrentHashMap<Int, NodeInfo>>()
+    private val nodeKind2NodeId2NodeInfoMap = ConcurrentHashMap<NodeKind, Map<Int, NodeInfo>>()
 
     private val actorCacheKey2ActorRefMap = ConcurrentHashMap<ActorCacheKey, ActorRef>()
     private lateinit var selfInstance: com.alibaba.nacos.api.naming.pojo.Instance
@@ -136,32 +137,42 @@ object NacosService {
         return maxId + 1
     }
 
-    // ==================== 发现（供业务节点查其它类型节点） ====================
+    // ==================== 发现（所有节点共享完整的节点目录） ====================
 
-    /** 订阅某类型节点的变更（各业务节点启动时调用，维护路由表） */
-    fun subscribeByNodeKind(kind: NodeKind) {
-        nodeKind2NodeId2NodeInfoMap.putIfAbsent(kind, ConcurrentHashMap())
+    /** 公共启动流程统一订阅全部类型（包括自身类型），新增 NodeKind 自动纳入发现。 */
+    fun subscribeAllNodeKinds(): Boolean {
+        return try {
+            NodeKind.entries.forEach { subscribeByNodeKind(it) }
+            true
+        } catch (error: Exception) {
+            logger.error(error) { "subscribe all node kinds failed" }
+            false
+        }
+    }
+
+    /** 订阅某类型节点的变更，维护路由表。 */
+    private fun subscribeByNodeKind(kind: NodeKind) {
+        nodeKind2NodeId2NodeInfoMap.putIfAbsent(kind, emptyMap())
         Nacos.naming.subscribe(kind.name, Nacos.conf.group) { event ->
             if (event is NamingEvent) {
-                val map = nodeKind2NodeId2NodeInfoMap[kind] ?: return@subscribe
-                val fresh = event.instances
-                    .filter {
-                        it.isEnabled && it.isHealthy
-                    }
-                    .map {
-                        NodeInfo.fromNacos(kind, it)
-                    }
-                    .associateBy {
-                        it.nodeId
-                    }
-
-                // 移除下线节点的 actor 缓存
-                actorCacheKey2ActorRefMap.keys.removeAll { key -> key.kind == kind && key.nodeId !in fresh.keys }
-                map.clear()
-                map.putAll(fresh)
-                logger.info { "directory[$kind] updated: ${map.keys}" }
+                refreshNodeKind(kind, event.instances)
             }
         }
+        // 与参考工程 NodeListener.start 一致：订阅后立即填充初始目录。
+        refreshNodeKind(kind, Nacos.naming.getAllInstances(kind.name, Nacos.conf.group))
+    }
+
+    private fun refreshNodeKind(kind: NodeKind, instances: List<Instance>) {
+        val fresh = instances
+            .filter { it.isEnabled && it.isHealthy }
+            .map { NodeInfo.fromNacos(kind, it) }
+            .associateBy { it.nodeId }
+
+        // 与参考工程一致，整体替换目录，避免读到 clear/putAll 之间的空目录。
+        nodeKind2NodeId2NodeInfoMap[kind] = fresh
+        // 移除下线节点的 actor 缓存。
+        actorCacheKey2ActorRefMap.keys.removeAll { key -> key.kind == kind && key.nodeId !in fresh.keys }
+        logger.info { "directory[$kind] updated: ${fresh.keys}" }
     }
 
     /** 拉取某类型全部在线节点（若尚未订阅则先同步拉一次） */
