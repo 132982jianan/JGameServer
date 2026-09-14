@@ -31,7 +31,7 @@ suspend fun main(args: Array<String>) {
     val nodeKind by parser.option(
         ArgType.Choice<NodeKind>(),
         fullName = "kind",
-        description = "节点类型: portal / gate / lobby / global / battle / insight"
+        description = "节点类型: ${NodeKind.entries.joinToString(" / ")}"
     ).required()
 
     //节点id(可不传递)
