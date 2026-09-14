@@ -17,13 +17,11 @@ data class NodeInfo(
     val systemName: String,
     /** 主 actor 名（各节点统一 user/serverActor 风格） */
     val actorName: String,
-    /** 对外 TCP 端口（Gate 用，0 表示无） */
-    val publicTcp: Int,
     /** 对外 WebSocket 端口（Gate 用，0 表示无） */
     val publicWs: Int,
     /** 对外 HTTP 端口（Portal/Insight 用，0 表示无） */
     val publicHttp: Int,
-    /** 客户端连接地址 ip:port（Gate 用，空表示无；供 Portal /gate 下发） */
+    /** 客户端 WebSocket URL（Gate 用，空表示无；供 Portal /gate 下发） */
     val connectPath: String = "",
 ) {
     /** 完整 actor path：akka://<sys>@<host>:<port>/user/<actor> */
@@ -35,7 +33,6 @@ data class NodeInfo(
         const val KEY_SYSTEM_NAME = "systemName"
         const val KEY_ACTOR_NAME = "actorName"
         const val KEY_NODE_ID = "nodeId"
-        const val KEY_PUBLIC_TCP = "publicTcp"
         const val KEY_PUBLIC_WS = "publicWs"
         const val KEY_PUBLIC_HTTP = "publicHttp"
         const val KEY_CONNECT_PATH = "connectPath"
@@ -50,7 +47,6 @@ data class NodeInfo(
                 arteryPort = ins.port,
                 systemName = meta[KEY_SYSTEM_NAME] ?: "",
                 actorName = meta[KEY_ACTOR_NAME] ?: "serverActor",
-                publicTcp = meta[KEY_PUBLIC_TCP]?.toIntOrNull() ?: 0,
                 publicWs = meta[KEY_PUBLIC_WS]?.toIntOrNull() ?: 0,
                 publicHttp = meta[KEY_PUBLIC_HTTP]?.toIntOrNull() ?: 0,
                 connectPath = meta[KEY_CONNECT_PATH] ?: "",
@@ -73,7 +69,6 @@ data class NodeInfo(
             KEY_ACTOR_NAME to actorName,
             KEY_ACTOR_PATH to actorPath,
         )
-        if (publicTcp > 0) ins.metadata[KEY_PUBLIC_TCP] = publicTcp.toString()
         if (publicWs > 0) ins.metadata[KEY_PUBLIC_WS] = publicWs.toString()
         if (publicHttp > 0) ins.metadata[KEY_PUBLIC_HTTP] = publicHttp.toString()
         if (connectPath.isNotEmpty()) ins.metadata[KEY_CONNECT_PATH] = connectPath

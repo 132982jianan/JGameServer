@@ -23,7 +23,7 @@ flowchart LR
 
     Client -- GET /gate --> Portal
     Portal -- Gate endpoint --> Client
-    Client -- TCP / WebSocket --> Gate
+    Client -- WebSocket --> Gate
     Gate -- Login / Heartbeat --> Lobby
     Gate -- Match / Battle / Chat --> Global
     Lobby -- online / offline / state query --> Global
@@ -170,7 +170,6 @@ java -jar server/build/libs/server-all.jar --kind=insight --id=1
 | 服务 | 默认地址 |
 | --- | --- |
 | Portal | `http://127.0.0.1:8080/gate` |
-| Gate TCP | `127.0.0.1:25001` |
 | Gate WebSocket | `ws://127.0.0.1:25002/websocket` |
 | Insight | `http://127.0.0.1:9000` |
 | Nacos | `127.0.0.1:8848` |
@@ -178,3 +177,7 @@ java -jar server/build/libs/server-all.jar --kind=insight --id=1
 | Redis | `127.0.0.1:6379`（仅 Insight token） |
 
 当前实现细节见 `doc/01_架构设计文档.md`；架构决策与验收基线见 `doc/02_四类节点目标架构设计评审稿.md`。
+
+客户端只使用 WebSocket：Portal 的 `/gate` 返回 `websocketEndpoint`，GUI 完成握手后收发二进制帧，每帧承载一条 `packetLength | msgId | errorCode | protobuf body` 消息，最大 64 KiB，支持分片聚合。心跳沿用 `Heartbeat` 业务协议。
+
+升级已有部署时，同步删除 Nacos 的 `net` 配置中 `portRange.gate.tcp` 字段，保留 `ws: 25002`，并重新启动节点刷新注册地址；本地默认配置不会覆盖已发布的 Nacos 配置。节点间通信仍使用 Akka Artery。

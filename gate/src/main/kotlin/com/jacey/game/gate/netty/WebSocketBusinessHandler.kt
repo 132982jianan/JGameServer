@@ -1,62 +1,53 @@
 package com.jacey.game.gate.netty
 
+import akka.actor.ActorRef
+import com.jacey.game.common.msg.InternalMessageId
+import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.gate.actor.GateClientMsg
 import io.github.oshai.kotlinlogging.KotlinLogging
-import io.netty.buffer.ByteBuf
 import io.netty.channel.ChannelHandlerContext
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame
-import io.netty.handler.codec.http.websocketx.ContinuationWebSocketFrame
-import io.netty.handler.codec.http.websocketx.PingWebSocketFrame
-import io.netty.handler.codec.http.websocketx.PongWebSocketFrame
-import io.netty.handler.codec.http.websocketx.TextWebSocketFrame
+import io.netty.channel.ChannelInboundHandlerAdapter
+import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler
+import io.netty.handler.timeout.IdleState
+import io.netty.handler.timeout.IdleStateEvent
 
-/** WebSocket 帧适配处理 */
-class WebSocketBusinessHandler : AbsBusinessHandler() {
+/** WebSocket 会话生命周期与业务入站处理；帧编解码由 WebSocketNetMessageCodec 负责。 */
+class WebSocketBusinessHandler : ChannelInboundHandlerAdapter() {
     private val logger = KotlinLogging.logger {}
 
-    override fun channelActive(ctx: ChannelHandlerContext) {
-        NettyServer.onChannelActive(ctx, this)
+    override fun channelInactive(ctx: ChannelHandlerContext) {
+        ctx.channel().attr(NettyServer.GATE_ACTOR_KEY).getAndSet(null)
+            ?.tell(LocalMessage(InternalMessageId.GATE_DISCONNECTED), ActorRef.noSender())
+        ctx.fireChannelInactive()
     }
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
-        when (msg) {
-            is TextWebSocketFrame -> {
-                logger.warn { "text frame not supported" }
+        if (msg is NetMessage) {
+            val gateActor = ctx.channel().attr(NettyServer.GATE_ACTOR_KEY).get()
+            if (gateActor == null) {
+                logger.warn { "no GateActor bound, drop msg msgId=${msg.msgId}" }
+                return
             }
-
-            is PingWebSocketFrame -> {
-                ctx.channel().write(PongWebSocketFrame(msg.content().retain()))
-            }
-
-            is BinaryWebSocketFrame -> {
-                // 转成 ByteBuf 走 NetMessage 解码（frame.content 已是解包后的 body？不——WS 也走同 codec，
-                // 由 WebSocketServerProtocolHandler 解出 BinaryWebSocketFrame，其 content 是完整 protobuf 包体）
-                val buf = msg.content()
-                val netMessage = decodeFull(buf)
-                if (netMessage != null) {
-                    super.channelRead(ctx, netMessage)
-                }
-            }
-
-            is ContinuationWebSocketFrame -> {
-                logger.warn { "continuation frame not supported" }
-            }
-
-            else -> ctx.fireChannelRead(msg)
+            gateActor.tell(GateClientMsg(msg), ActorRef.noSender())
+        } else {
+            ctx.fireChannelRead(msg)
         }
     }
 
-    override fun getGateActorPrefix(): String {
-        return "ws-"
+    override fun userEventTriggered(ctx: ChannelHandlerContext, evt: Any) {
+        if (evt is WebSocketServerProtocolHandler.HandshakeComplete) {
+            NettyServer.onWebSocketReady(ctx)
+        } else if (evt is IdleStateEvent && evt.state() == IdleState.ALL_IDLE) {
+            logger.info { "idle timeout, close channel ${ctx.channel()}" }
+            ctx.close()
+        } else {
+            ctx.fireUserEventTriggered(evt)
+        }
     }
 
-    private fun decodeFull(buf: ByteBuf): NetMessage? {
-        if (buf.readableBytes() < NettyServer.HEADER_LENGTH) return null
-        val totalLength = buf.readInt()
-        val msgId = buf.readInt()
-        val errorCode = buf.readInt()
-        val bytes = ByteArray(totalLength - NettyServer.HEADER_LENGTH)
-        buf.readBytes(bytes)
-        return NetMessage(msgId, bytes).also { it.errorCode = errorCode }
+    override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+        logger.warn(cause) { "invalid WebSocket connection, closing ${ctx.channel()}" }
+        ctx.close()
     }
 }

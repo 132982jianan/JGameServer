@@ -5,6 +5,7 @@ import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.msg.RpcMessageRanges
 import com.jacey.game.common.proto3.CommonMsg
 import com.jacey.game.common.proto3.Rpc
 import com.jacey.game.db.AccountId
@@ -38,8 +39,8 @@ class GateActor(private val state: GateActorState) : BaseMessageActor() {
             Rpc.RpcNameEnum.Heartbeat_VALUE -> processLobby(msg)
             Rpc.RpcNameEnum.Match_VALUE,
             Rpc.RpcNameEnum.CancelMatch_VALUE -> processGlobalMatch(msg)
-            in 6000..6999 -> processBattle(msg)
-            in 10001..14000 -> processGlobal(msg)
+            in RpcMessageRanges.BATTLE -> processBattle(msg)
+            in RpcMessageRanges.CHAT -> processGlobal(msg)
             else -> replyAndClose(msg.msgId, Rpc.RpcErrorCodeEnum.ClientError_VALUE)
         }
     }

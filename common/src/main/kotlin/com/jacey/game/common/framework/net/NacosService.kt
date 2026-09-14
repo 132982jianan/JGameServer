@@ -60,7 +60,7 @@ object NacosService {
         val finalPorts = netConfig.calNodePortByNodeKindAndNodeId(kind, id)
 
         val resolvedConnectPath = connectPath.ifEmpty {
-            if (finalPorts.tcp > 0) "${netConfig.publicIp.resolve()}:${finalPorts.tcp}" else ""
+            if (finalPorts.ws > 0) WebSocketProtocol.endpoint(netConfig.publicIp.resolve(), finalPorts.ws) else ""
         }
 
         selfNodeInfo = NodeInfo(
@@ -70,7 +70,6 @@ object NacosService {
             arteryPort = finalPorts.artery,
             systemName = systemName(kind, id),
             actorName = actorName,
-            publicTcp = finalPorts.tcp,
             publicWs = finalPorts.ws,
             publicHttp = finalPorts.http,
             connectPath = resolvedConnectPath,

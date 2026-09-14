@@ -43,5 +43,5 @@ target/
 *.iml
 *.iws
 
-# test ignore
-test/
+# 临时测试目录；src/test 下的回归测试需要纳入版本管理。
+/test/

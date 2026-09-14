@@ -122,7 +122,6 @@ services:
       PUBLIC_IP: ${PUBLIC_IP:-127.0.0.1}
     ports:
       - "25000:25000"
-      - "25001:25001"
       - "25002:25002"
     depends_on:
       nacos: { condition: service_healthy }

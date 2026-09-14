@@ -6,6 +6,7 @@ import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.msg.LocalMessage
 import com.jacey.game.common.msg.NetMessage
+import com.jacey.game.common.msg.RpcMessageRanges
 import com.jacey.game.common.msg.RemoteMessage
 import com.jacey.game.common.proto3.RemoteServer
 import com.jacey.game.common.proto3.Rpc
@@ -32,8 +33,10 @@ class GlobalRootActor : BaseMessageActor() {
                 Rpc.RpcNameEnum.Match_VALUE,
                 Rpc.RpcNameEnum.CancelMatch_VALUE -> matchActor.tell(msg, sender)
 
-                in 6000..6999 -> battleManagerActor.tell(msg, sender)
-                else -> chatManagerActor.tell(msg, sender)
+                in RpcMessageRanges.BATTLE -> battleManagerActor.tell(msg, sender)
+                in RpcMessageRanges.CHAT -> chatManagerActor.tell(msg, sender)
+
+                else -> sendErrorToClient(msg, Rpc.RpcErrorCodeEnum.ClientError_VALUE, sender)
             }
         }
         registerHandler(RemoteMessage::class.java) { msg, sender ->

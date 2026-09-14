@@ -29,10 +29,9 @@ data class NetConfig(
         val offset = portOffset.resolve()
 
         return NodePort(
-            calPort(base.artery, offset, nodeId),
-            calPort(base.tcp, offset, nodeId),
-            calPort(base.ws, offset, nodeId),
-            calPort(base.http, offset, nodeId)
+            artery = calPort(base.artery, offset, nodeId),
+            ws = calPort(base.ws, offset, nodeId),
+            http = calPort(base.http, offset, nodeId),
         )
     }
 

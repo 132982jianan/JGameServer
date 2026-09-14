@@ -55,8 +55,7 @@ echo.
 echo JGameServer deployment completed successfully.
 echo Portal allocation:     http://127.0.0.1:8080/gate
 echo Nacos console:         http://127.0.0.1:8848/nacos
-echo Client TCP entry:      127.0.0.1:25001
-echo Client WebSocket:      127.0.0.1:25002 (path /websocket)
+echo Client WebSocket:      ws://127.0.0.1:25002/websocket
 echo Insight HTTP:          http://127.0.0.1:9000
 echo Mongo:                 127.0.0.1:27017 (db: jgame_server)
 echo Redis:                 127.0.0.1:6379

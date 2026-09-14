@@ -11,6 +11,9 @@ dependencies {
     implementation(libs.slf4j.api)
     implementation(libs.log4j.core)
     implementation(libs.log4j.slf4j2.impl)
+    testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.10.1")
 }
 
 application {

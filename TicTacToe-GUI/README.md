@@ -1,18 +1,27 @@
-## 概览
-![客户端演示](https://github.com/JaceyRx/JGameServer/blob/master/doc/img/client.gif "客户端演示")
+# TicTacToe-GUI
 
-## 说明
- 该项目为 [JGameServer](https://github.com/JaceyRx/JGameServer "JGameServer") 游戏服务器后端项目的测试客户端。请配合服务器端一起使用
- 
- ## 快速启动
- ```
- 1. clone https://github.com/JaceyRx/TicTacToe-GUI.git
- 2. 进入项目目录，修改config.properties配置文件（修改服务器端IP地址）
- 3. mvn install -DskipTest 编译项目
- 4. 进入 target 目录，使用命令 java -Djava.awt.headless=false -jar TicTacToe-GUI.jar 启动项目
- ```
-## Tips
- ```
- 1. 开发环境是 JDK1.8 高于或低于该版本JDK可能会无法运行
- 2. 请使用IDEA 打开项目
- ```
+Swing 测试客户端，与 JGameServer 服务端一起使用，要求 JDK 21。
+
+## 连接方式
+
+1. 向 Portal 的 `GET /gate` 请求节点地址。
+2. 读取响应中的 `websocketEndpoint`（默认 `ws://127.0.0.1:25002/websocket`）。
+3. WebSocket 握手成功后，使用二进制帧收发游戏消息；不提供原生 TCP 连接。
+
+每帧包含一条 `packetLength | msgId | errorCode | protobuf body` 消息，最大 64 KiB。支持 `ws://` 和经过证书、主机名校验的 `wss://` 地址。登录后沿用 `Heartbeat` 协议发送心跳。
+
+## 启动
+
+先启动服务端，再在 JGameServer 仓库根目录运行：
+
+```powershell
+$env:PORTAL_HOST = '127.0.0.1'
+$env:PORTAL_PORT = '8080'
+.\gradlew.bat :TicTacToe-GUI:run
+```
+
+`PORTAL_HOST` / `PORTAL_PORT` 默认分别为 `127.0.0.1` / `8080`，它们指定 Portal HTTP 地址。
+
+```powershell
+.\gradlew.bat :TicTacToe-GUI:build
+```

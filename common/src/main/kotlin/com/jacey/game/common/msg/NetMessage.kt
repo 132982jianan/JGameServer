@@ -14,6 +14,10 @@ import io.netty.buffer.Unpooled
  * 线协议：packetLength | msgId | errorCode | protobuf body
  */
 class NetMessage() : AbstractMessage() {
+    companion object {
+        const val HEADER_LENGTH = 12
+    }
+
     var data: ByteArray? = null
     var errorCode: Int = Rpc.RpcErrorCodeEnum.Ok_VALUE
     var sessionId: Int = 0
@@ -26,7 +30,7 @@ class NetMessage() : AbstractMessage() {
         }
     val totalLength: Int
         get() {
-            return 12 + dataLength
+            return HEADER_LENGTH + dataLength
         }
 
     constructor(msgId: Int, lite: MessageLite) : this() {
