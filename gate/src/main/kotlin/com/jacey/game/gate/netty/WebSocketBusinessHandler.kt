@@ -30,11 +30,16 @@ class WebSocketBusinessHandler : ChannelInboundHandlerAdapter() {
 
     override fun channelActive(ctx: ChannelHandlerContext) {
         val channel = ctx.channel()
+
+        // TODO
         val sessionId =
             Math.addExact(Math.multiplyExact(NacosService.selfNodeId, 1_000_000), connectionSequence.incrementAndGet())
+
         val state = GateActorState(channel, sessionId)
         gateActorRef = AkkaService.system.actorOf(
-            Props.create(GateActor::class.java) { GateActor(state) },
+            Props.create(GateActor::class.java) {
+                GateActor(state)
+            },
             "ws-${channel.id().asShortText()}",
         )
         logger.info { "GateActor created: sessionId=$sessionId ip=${state.userIp}" }
@@ -48,12 +53,11 @@ class WebSocketBusinessHandler : ChannelInboundHandlerAdapter() {
 
     override fun channelRead(ctx: ChannelHandlerContext, msg: Any) {
         if (msg is NetMessage) {
-            val gateActor = gateActorRef
-            if (gateActor == null) {
+            if (gateActorRef == null) {
                 logger.warn { "no GateActor available, drop msg msgId=${msg.msgId}" }
                 return
             }
-            gateActor.tell(GateClientMsg(msg), ActorRef.noSender())
+            gateActorRef?.tell(GateClientMsg(msg), ActorRef.noSender())
         } else {
             ctx.fireChannelRead(msg)
         }
