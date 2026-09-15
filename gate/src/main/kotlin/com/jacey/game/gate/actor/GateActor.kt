@@ -1,6 +1,5 @@
 package com.jacey.game.gate.actor
 
-import akka.actor.ActorRef
 import com.jacey.game.common.akka.BaseMessageActor
 import com.jacey.game.common.msg.InternalMessageId
 import com.jacey.game.common.msg.LocalMessage
@@ -68,7 +67,7 @@ class GateActor(private val state: GateActorState) : BaseMessageActor() {
         }
 
         val accountId = AccountId.createAccountIdByLoginTypeAndLoginName(LoginType.LoginDebug, loginName)
-        val lobbyId = MessageRouterService.chooseLobby(accountId.toString())
+        val lobbyId = MessageRouterService.chooseLobbyNodeId(accountId.toString())
         if (lobbyId == null) {
             replyAndClose(msg.msgId, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
             return
@@ -76,7 +75,7 @@ class GateActor(private val state: GateActorState) : BaseMessageActor() {
 
         state.accountId = accountId.toString()
         state.lobbyId = lobbyId
-        if (!MessageRouterService.forwardToLobby(msg, self(), lobbyId)) {
+        if (!MessageRouterService.forwardMsgToLobbyByLobbyNodeId(msg, self(), lobbyId)) {
             replyAndClose(msg.msgId, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
         }
     }
@@ -87,7 +86,7 @@ class GateActor(private val state: GateActorState) : BaseMessageActor() {
             replyAndClose(msg.msgId, Rpc.RpcErrorCodeEnum.ClientError_VALUE)
             return
         }
-        if (!MessageRouterService.forwardToLobby(msg, self(), lobbyId)) {
+        if (!MessageRouterService.forwardMsgToLobbyByLobbyNodeId(msg, self(), lobbyId)) {
             replyAndClose(msg.msgId, Rpc.RpcErrorCodeEnum.ServerNotAvailable_VALUE)
         }
     }
@@ -125,7 +124,7 @@ class GateActor(private val state: GateActorState) : BaseMessageActor() {
                 sessionId = state.sessionId
                 userId = state.playerId
             }
-            MessageRouterService.forwardToLobby(logout, self(), lobbyId)
+            MessageRouterService.forwardMsgToLobbyByLobbyNodeId(logout, self(), lobbyId)
         }
         context().stop(self())
     }
